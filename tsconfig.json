@@ -24,11 +24,9 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
 
-    // Alisases
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
-      "@/router": ["router/*"],
     },
   },
 }
