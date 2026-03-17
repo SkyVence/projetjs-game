@@ -1,9 +1,17 @@
 {
-  "name": "projetjs-game",
+  "name": "dungeon-crawler",
   "module": "index.ts",
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "bun --watch run src/index.html"
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "vite": "^8.0.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
   }
 }
