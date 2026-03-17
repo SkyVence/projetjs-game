@@ -12,8 +12,7 @@ export class Entity {
   public components: Map<string, Component>;
 
   /**
-   * Create a new entity with the given id.
-   * @param id Unique identifier for this entity.
+   * Create a new entity with a random id.
    */
   constructor() {
     this.id = generateId();
