@@ -1,4 +1,5 @@
 import type { Component } from "@/class/base/component";
+import { generateId } from "@/utils/generateId";
 
 /**
  * Represents a game entity composed of typed components.
@@ -14,8 +15,8 @@ export class Entity {
    * Create a new entity with the given id.
    * @param id Unique identifier for this entity.
    */
-  constructor(id: string) {
-    this.id = id;
+  constructor() {
+    this.id = generateId();
     this.components = new Map<string, Component>();
   }
 
