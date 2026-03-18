@@ -1,41 +1,18 @@
-import {
-  ContinueBtn,
-  NewGameBtn,
-  SettingsBtn,
-  ExitBtn,
-  GameTitle,
-  PatchNote,
-} from "@/menu";
-import { playerNameInput } from "@/input";
-import { Player } from "@/class/player";
-
-let player: Player;
+import { MapGenerator } from "@/utils/MapGen";
+import { MapRenderer } from "@/utils/MapRenderer";
 
 const app = document.getElementById("app");
+
 if (app) {
-  app.textContent = "Game loading...";
-  app.appendChild(GameTitle);
-  app.appendChild(PatchNote);
-  app.appendChild(ContinueBtn);
-  app.appendChild(NewGameBtn);
-  app.appendChild(SettingsBtn);
-  app.appendChild(ExitBtn);
+  // Générer et afficher la map immédiatement
+  app.textContent = "";
 
-  // Attach directly to the imported element
-  NewGameBtn.addEventListener("click", () => {
-    if (!playerNameInput.isConnected) {
-      app.appendChild(playerNameInput);
-    }
-    playerNameInput.focus();
-  });
+  const canvas = document.createElement("canvas");
+  app.appendChild(canvas);
 
-  playerNameInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      const playerNameValue = playerNameInput.value.trim();
-      if (playerNameValue) {
-        player = new Player(playerNameValue);
-        app.textContent = `Hello, ${player.getPlayerName()}!`;
-      }
-    }
-  });
+  const generator = new MapGenerator({ width: 80, height: 50, maxDepth: 4 });
+  const map = generator.generate();
+
+  const renderer = new MapRenderer(canvas, { tileSize: 16 });
+  renderer.render(map);
 }
