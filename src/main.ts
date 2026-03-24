@@ -55,6 +55,8 @@ if (app) {
         if (document.fullscreenElement) {
           document.exitFullscreen();
         }
+        app.innerHTML = "";
+        app.appendChild(ExitTitle);
       }
     });
 
@@ -71,6 +73,18 @@ if (app) {
           startGame();
         }
       }
+    });
+
+    CreditsBtn.addEventListener("click", () => {
+      app.textContent = "Credits";
+    });
+
+    ContinueBtn.addEventListener("click", () => {
+      app.textContent = "Hello !";
+    });
+
+    SettingsBtn.addEventListener("click", () => {
+      app.textContent = "Settings";
     });
   };
 
