@@ -28,11 +28,13 @@ export class GameScene {
   private input: InputManager;
 
   private entities: Entity[] = [];
+  private enemies: Entity[] = [];
   private player: Player | null = null;
 
   // Configuration
-  private readonly PLAYER_SPEED = 100; // pixels per second
+  private readonly PLAYER_SPEED = 150; // pixels per second
   private readonly TILE_SIZE = 32;
+  private lastMovementInput = { dx: 0, dy: 0 };
 
   constructor(container: HTMLElement, config: GameSceneConfig) {
     this.container = container;
@@ -74,8 +76,36 @@ export class GameScene {
 
     this.entities.push(this.player);
 
+    // Spawn some enemies (static for now)
+    this.spawnEnemies();
+
     // Start game loop
     this.gameLoop.start();
+  }
+
+  /**
+   * Spawn enemies in the game world.
+   */
+  private spawnEnemies(): void {
+    const enemyPositions: Array<[number, number]> = [
+      [300, 300],
+      [500, 400],
+      [700, 200],
+      [900, 500],
+      [400, 600],
+      [1000, 150],
+      [1200, 400],
+      [600, 800],
+    ];
+
+    enemyPositions.forEach((pos) => {
+      const enemy = new Entity();
+      enemy.addComponent(new Position(pos[0], pos[1]));
+      enemy.addComponent(new Velocity(0, 0));
+      enemy.addComponent(new Health(50));
+      this.enemies.push(enemy);
+      this.entities.push(enemy);
+    });
   }
 
   /**
@@ -86,6 +116,7 @@ export class GameScene {
 
     // Handle input
     const { dx, dy } = this.input.getMovementInput();
+    this.lastMovementInput = { dx, dy };
 
     // Update player velocity based on input
     const velocity = this.player.getComponent<Velocity>("velocity");
@@ -130,14 +161,24 @@ export class GameScene {
     // Get camera offset
     const { offsetX, offsetY } = this.camera.getOffset();
 
-    // Draw entities
-    this.entities.forEach((entity) => {
-      let color = "#fff";
-      if (entity === this.player) {
-        color = "#00ff00"; // Green for player
-      }
-      this.renderer.drawEntity(entity, offsetX, offsetY, color, this.TILE_SIZE);
+    // Draw enemies first (background)
+    this.enemies.forEach((enemy) => {
+      this.renderer.drawEntity(enemy, offsetX, offsetY, "#ff3333", this.TILE_SIZE);
     });
+
+    // Draw player on top
+    if (this.player) {
+      this.renderer.drawCharacter(
+        this.player,
+        offsetX,
+        offsetY,
+        this.TILE_SIZE,
+        this.lastMovementInput,
+      );
+    }
+
+    // Draw FPS
+    this.renderer.drawFPS(1 / _deltaTime);
   }
 
   /**
