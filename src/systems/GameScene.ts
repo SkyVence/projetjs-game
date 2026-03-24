@@ -99,8 +99,14 @@ export class GameScene {
 
     const velocity = this.player.getComponent<Velocity>("velocity");
     if (velocity) {
-      velocity.x = dx * this.PLAYER_SPEED;
-      velocity.y = dy * this.PLAYER_SPEED;
+      const length = Math.sqrt(dx * dx + dy * dy);
+      if (length > 0) {
+        velocity.x = (dx / length) * this.PLAYER_SPEED;
+        velocity.y = (dy / length) * this.PLAYER_SPEED;
+      } else {
+        velocity.x = 0;
+        velocity.y = 0;
+      }
     }
 
     this.entities.forEach((entity) => {
