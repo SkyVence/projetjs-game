@@ -8,22 +8,17 @@ export interface RenderConfig {
   tileSize?: number;
 }
 
-/**
- * Canvas-based renderer for the game.
- * Handles drawing entities on a canvas element.
- */
 export class CanvasRenderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private config: RenderConfig;
 
   constructor(container: HTMLElement, config: RenderConfig) {
-    // Create and setup canvas
     this.canvas = document.createElement("canvas");
     this.canvas.width = config.width;
     this.canvas.height = config.height;
     this.canvas.style.border = "3px solid #00ff00";
-    this.canvas.style.imageRendering = "pixelated"; // Crisp pixels
+    this.canvas.style.imageRendering = "pixelated";
     this.canvas.style.display = "block";
     this.canvas.style.margin = "20px auto";
     this.canvas.style.boxShadow = "0 0 20px rgba(0, 255, 0, 0.3)";
@@ -38,17 +33,11 @@ export class CanvasRenderer {
     this.config = config;
   }
 
-  /**
-   * Clear the canvas with background color.
-   */
   clear(): void {
     this.ctx.fillStyle = this.config.backgroundColor || "#000";
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
-  /**
-   * Draw a simple colored rectangle (placeholder for sprites).
-   */
   drawEntity(
     entity: Entity,
     offsetX: number = 0,
@@ -65,20 +54,15 @@ export class CanvasRenderer {
     this.ctx.fillStyle = color;
     this.ctx.fillRect(x, y, size, size);
 
-    // Draw border for better visibility
     this.ctx.strokeStyle = color === "#00ff00" ? "#00aa00" : "#666";
     this.ctx.lineWidth = 2;
     this.ctx.strokeRect(x, y, size, size);
 
-    // Optional: Draw entity ID for debugging
     this.ctx.fillStyle = "#000";
     this.ctx.font = "bold 10px Arial";
     this.ctx.fillText(entity.id.substring(0, 4), x + 4, y + 14);
   }
 
-  /**
-   * Draw a moving character with direction indicator.
-   */
   drawCharacter(
     entity: Entity,
     offsetX: number = 0,
@@ -92,14 +76,12 @@ export class CanvasRenderer {
     const x = pos.x + offsetX;
     const y = pos.y + offsetY;
 
-    // Draw body
     this.ctx.fillStyle = "#00ff00";
     this.ctx.fillRect(x, y, size, size);
     this.ctx.strokeStyle = "#00aa00";
     this.ctx.lineWidth = 2;
     this.ctx.strokeRect(x, y, size, size);
 
-    // Draw direction indicator
     if (direction.dx !== 0 || direction.dy !== 0) {
       const centerX = x + size / 2;
       const centerY = y + size / 2;
@@ -116,15 +98,11 @@ export class CanvasRenderer {
       this.ctx.stroke();
     }
 
-    // Draw ID
     this.ctx.fillStyle = "#000";
     this.ctx.font = "bold 10px Arial";
     this.ctx.fillText("PLY", x + 4, y + 14);
   }
 
-  /**
-   * Draw a grid for debugging purposes.
-   */
   drawGrid(gridSize: number = 32, color: string = "#333"): void {
     this.ctx.strokeStyle = color;
     this.ctx.lineWidth = 0.5;
@@ -144,18 +122,12 @@ export class CanvasRenderer {
     }
   }
 
-  /**
-   * Draw FPS counter for debugging.
-   */
   drawFPS(fps: number): void {
     this.ctx.fillStyle = "#00ff00";
     this.ctx.font = "bold 14px Arial";
     this.ctx.fillText(`FPS: ${Math.round(fps)}`, 10, 20);
   }
 
-  /**
-   * Get canvas dimensions.
-   */
   getDimensions(): { width: number; height: number } {
     return { width: this.canvas.width, height: this.canvas.height };
   }

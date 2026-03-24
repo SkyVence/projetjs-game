@@ -15,9 +15,6 @@ export interface GameSceneConfig {
   viewportHeight: number;
 }
 
-/**
- * Main game scene manager that orchestrates all game systems.
- */
 export class GameScene {
   private container: HTMLElement;
   private config: GameSceneConfig;
@@ -31,8 +28,7 @@ export class GameScene {
   private enemies: Entity[] = [];
   private player: Player | null = null;
 
-  // Configuration
-  private readonly PLAYER_SPEED = 150; // pixels per second
+  private readonly PLAYER_SPEED = 150;
   private readonly TILE_SIZE = 32;
   private lastMovementInput = { dx: 0, dy: 0 };
 
@@ -40,7 +36,6 @@ export class GameScene {
     this.container = container;
     this.config = config;
 
-    // Initialize systems
     this.renderer = new CanvasRenderer(container, {
       width: config.viewportWidth,
       height: config.viewportHeight,
@@ -53,39 +48,27 @@ export class GameScene {
       viewportHeight: config.viewportHeight,
       mapWidth: config.mapWidth,
       mapHeight: config.mapHeight,
-      smoothness: 0.15, // Smooth camera follow
+      smoothness: 0.15,
     });
 
     this.gameLoop = new GameLoop();
     this.input = InputManager.getInstance();
 
-    // Register game loop callbacks
     this.gameLoop.addUpdateListener((dt) => this.update(dt));
     this.gameLoop.addRenderListener((dt) => this.render(dt));
   }
 
-  /**
-   * Initialize the game scene with a player.
-   */
   initialize(): void {
-    // Create player
     this.player = new Player("Hero");
-    this.player.addComponent(new Position(100, 100)); // Starting position
+    this.player.addComponent(new Position(100, 100));
     this.player.addComponent(new Velocity(0, 0));
     this.player.addComponent(new Health(100));
 
     this.entities.push(this.player);
-
-    // Spawn some enemies (static for now)
     this.spawnEnemies();
-
-    // Start game loop
     this.gameLoop.start();
   }
 
-  /**
-   * Spawn enemies in the game world.
-   */
   private spawnEnemies(): void {
     const enemyPositions: Array<[number, number]> = [
       [300, 300],
@@ -108,65 +91,47 @@ export class GameScene {
     });
   }
 
-  /**
-   * Update game logic (input, physics, etc).
-   */
   private update(deltaTime: number): void {
     if (!this.player) return;
 
-    // Handle input
     const { dx, dy } = this.input.getMovementInput();
     this.lastMovementInput = { dx, dy };
 
-    // Update player velocity based on input
     const velocity = this.player.getComponent<Velocity>("velocity");
     if (velocity) {
       velocity.x = dx * this.PLAYER_SPEED;
       velocity.y = dy * this.PLAYER_SPEED;
     }
 
-    // Update entity positions based on velocity
     this.entities.forEach((entity) => {
       const pos = entity.getComponent<Position>("position");
       const vel = entity.getComponent<Velocity>("velocity");
 
       if (pos && vel) {
-        // Apply velocity
         pos.x += vel.x * deltaTime;
         pos.y += vel.y * deltaTime;
 
-        // Clamp to map bounds
         pos.x = Math.max(0, Math.min(pos.x, this.config.mapWidth - this.TILE_SIZE));
         pos.y = Math.max(0, Math.min(pos.y, this.config.mapHeight - this.TILE_SIZE));
       }
     });
 
-    // Update camera
     if (this.player) {
       this.camera.follow(this.player);
       this.camera.update();
     }
   }
 
-  /**
-   * Render the game scene.
-   */
   private render(_deltaTime: number): void {
-    // Clear canvas
     this.renderer.clear();
-
-    // Draw grid for reference
     this.renderer.drawGrid(this.TILE_SIZE, "#2a2a4e");
 
-    // Get camera offset
     const { offsetX, offsetY } = this.camera.getOffset();
 
-    // Draw enemies first (background)
     this.enemies.forEach((enemy) => {
       this.renderer.drawEntity(enemy, offsetX, offsetY, "#ff3333", this.TILE_SIZE);
     });
 
-    // Draw player on top
     if (this.player) {
       this.renderer.drawCharacter(
         this.player,
@@ -177,13 +142,9 @@ export class GameScene {
       );
     }
 
-    // Draw FPS
     this.renderer.drawFPS(1 / _deltaTime);
   }
 
-  /**
-   * Cleanup and stop the game scene.
-   */
   destroy(): void {
     this.gameLoop.stop();
     this.container.innerHTML = "";
