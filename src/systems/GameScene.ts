@@ -39,7 +39,7 @@ export class GameScene {
     this.renderer = new CanvasRenderer(container, {
       width: config.viewportWidth,
       height: config.viewportHeight,
-      backgroundColor: "#1a1a2e",
+      backgroundColor: "#000",
       tileSize: this.TILE_SIZE,
     });
 
@@ -124,12 +124,12 @@ export class GameScene {
 
   private render(_deltaTime: number): void {
     this.renderer.clear();
-    this.renderer.drawGrid(this.TILE_SIZE, "#2a2a4e");
+    this.renderer.drawGrid(this.TILE_SIZE, "#222");
 
     const { offsetX, offsetY } = this.camera.getOffset();
 
     this.enemies.forEach((enemy) => {
-      this.renderer.drawEntity(enemy, offsetX, offsetY, "#ff3333", this.TILE_SIZE);
+      this.renderer.drawEntity(enemy, offsetX, offsetY, "#888", this.TILE_SIZE);
     });
 
     if (this.player) {
@@ -141,8 +141,6 @@ export class GameScene {
         this.lastMovementInput,
       );
     }
-
-    this.renderer.drawFPS(1 / _deltaTime);
   }
 
   destroy(): void {
