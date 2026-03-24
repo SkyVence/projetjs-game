@@ -1,6 +1,4 @@
 import {
-  // GameTitle,
-  PatchNote,
   ContinueBtn,
   NewGameBtn,
   SettingsBtn,
@@ -14,18 +12,36 @@ import { Player } from "@/class/player";
 
 let player: Player;
 
-const app = document.getElementById("app");
-if (app) {
-  // app.appendChild(GameTitle);
-  app.appendChild(GameLogo);
-  app.appendChild(PatchNote);
-  app.appendChild(ContinueBtn);
-  app.appendChild(NewGameBtn);
-  app.appendChild(SettingsBtn);
-  app.appendChild(CreditsBtn);
-  app.appendChild(ExitBtn);
+playerNameInput.hidden = true;
 
-  // Bouton afin de quitter le jeu :
+const app = document.getElementById("app");
+
+if (app) {
+  const menuScreen = document.createElement("div");
+  menuScreen.className = "menu-screen";
+
+  const menuLeft = document.createElement("section");
+  menuLeft.className = "menu-left";
+
+  const menuRight = document.createElement("aside");
+  menuRight.className = "menu-right";
+
+  const logoFrame = document.createElement("div");
+  logoFrame.className = "logo-frame";
+
+  const menuNav = document.createElement("nav");
+  menuNav.className = "menu-nav";
+
+  const newGameWrap = document.createElement("div");
+  newGameWrap.className = "new-game-wrap";
+  newGameWrap.append(NewGameBtn, playerNameInput);
+
+  logoFrame.appendChild(GameLogo);
+  menuNav.append(ContinueBtn, newGameWrap, SettingsBtn, CreditsBtn, ExitBtn);
+
+  menuLeft.append(logoFrame, menuNav);
+  menuScreen.append(menuLeft, menuRight);
+  app.appendChild(menuScreen);
 
   ExitBtn.addEventListener("click", () => {
     if (confirm("Quitter VillainDungeon ?")) {
@@ -37,19 +53,12 @@ if (app) {
     }
   });
 
-  // Bouton afin de commencer une nouvelle partie :
-
-  // Attach directly to the imported element
   NewGameBtn.addEventListener("click", () => {
-    if (playerNameInput.isConnected) {
-      playerNameInput.remove();
-    } else {
-      app.append(playerNameInput);
+    playerNameInput.hidden = !playerNameInput.hidden;
+    if (!playerNameInput.hidden) {
+      playerNameInput.focus();
     }
-    playerNameInput.focus();
   });
-
-  // Bouton afin de valider le nom du joueur :
 
   playerNameInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
@@ -61,37 +70,15 @@ if (app) {
     }
   });
 
-  // Bouton afin d'afficher les crédits :
-
   CreditsBtn.addEventListener("click", () => {
     app.textContent = "Credits";
   });
 
-  // Bouton afin de continuer une partie :
-
   ContinueBtn.addEventListener("click", () => {
-    // if (player) {
-    app.textContent = `Hello !`;
-    // }
+    app.textContent = "Hello !";
   });
-
-  // Bouton afin d'aller dans les paramètres :
 
   SettingsBtn.addEventListener("click", () => {
     app.textContent = "Settings";
   });
 }
-
-// import { Router } from "@/router/class/router";
-// import { HomeView, LevelView } from "@/router/examples/";
-
-// const router = new Router(
-//   [
-//     { path: /^\/$/, view: HomeView },
-//     { path: /^\/level\/(?<id>\d+)$/, view: LevelView },
-//   ],
-//   "#app",
-// );
-
-// router.enableLinks();
-// router.handleLocation();
