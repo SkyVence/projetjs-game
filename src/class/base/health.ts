@@ -10,7 +10,9 @@ class Health implements Component {
    * Create a Health component.
    * @param health Current hit points value.
    */
-  constructor(public health: Number) {
+  constructor(public health: number) {
     this.health = health;
   }
 }
+
+export { Health };

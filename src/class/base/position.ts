@@ -19,3 +19,5 @@ class Position implements Component {
     this.y = y;
   }
 }
+
+export { Position };

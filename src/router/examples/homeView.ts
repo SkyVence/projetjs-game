@@ -6,7 +6,25 @@ export class HomeView implements View {
     root.innerHTML = `
       <h1>🏠 Home</h1>
       <p>Welcome, Antoine. Click the button to play!</p>
-      <button id="playBtn">Increase: ${this.counter}</button>
+      <a href="/level/1" style="
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: #00ff00;
+        color: #000;
+        text-decoration: none;
+        border-radius: 5px;
+        font-weight: bold;
+        cursor: pointer;
+      ">Play Game (Level 1)</a>
+      <br><br>
+      <button id="playBtn" style="
+        padding: 10px 20px;
+        background-color: #0066ff;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      ">Increase: ${this.counter}</button>
     `;
 
     const btn = root.querySelector("#playBtn")!;
