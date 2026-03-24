@@ -7,7 +7,6 @@ import { InputManager } from "@/systems/InputManager";
 import { CanvasRenderer } from "@/systems/CanvasRenderer";
 import { Camera } from "@/systems/Camera";
 import { GameLoop } from "@/systems/GameLoop";
-import { normalizeVector } from "@/utils/math";
 
 export interface GameSceneConfig {
   mapWidth: number;
@@ -98,12 +97,10 @@ export class GameScene {
     const { dx, dy } = this.input.getMovementInput();
     this.lastMovementInput = { dx, dy };
 
-    const { dx: normalizedDx, dy: normalizedDy } = normalizeVector(dx, dy);
-
     const velocity = this.player.getComponent<Velocity>("velocity");
     if (velocity) {
-      velocity.x = normalizedDx * this.PLAYER_SPEED;
-      velocity.y = normalizedDy * this.PLAYER_SPEED;
+      velocity.x = dx * this.PLAYER_SPEED;
+      velocity.y = dy * this.PLAYER_SPEED;
     }
 
     this.entities.forEach((entity) => {
