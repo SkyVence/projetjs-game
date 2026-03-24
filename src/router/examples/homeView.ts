@@ -5,7 +5,7 @@ export class HomeView implements View {
   mount(root: HTMLElement) {
     root.innerHTML = `
       <h1>🏠 Home</h1>
-      <p>Welcome, Antoine. Click the button to play!</p>
+      <p>Welcome</p>
       <button id="playBtn">Increase: ${this.counter}</button>
     `;
 
