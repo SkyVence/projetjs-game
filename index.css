@@ -1,25 +1,190 @@
-.box-button {
+:root {
+    --bg-overlay: rgba(7, 12, 24, 0.58);
+    --panel-overlay: rgba(10, 16, 32, 0.72);
+    --text-main: #f2eadf;
+    --text-muted: rgba(242, 234, 223, 0.75);
+    --accent: #7ad7ff;
+    --glow: rgba(122, 215, 255, 0.35);
+    --menu-item-width: clamp(220px, 24vw, 360px);
+}
+
+html,
+body,
+#app {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    overflow: hidden;
+    font-family: "Arial", sans-serif;
+    color: var(--text-main);
+    background:
+        linear-gradient(
+            90deg,
+            rgba(0, 0, 0, 0.55) 0%,
+            rgba(0, 0, 0, 0.2) 35%,
+            rgba(0, 0, 0, 0.05) 100%
+        ),
+        url("background.jpg") center / cover no-repeat;
+}
+
+#app {
+    position: relative;
+}
+
+.menu-screen {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-columns: minmax(320px, 36%) 1fr;
+    gap: clamp(24px, 4vw, 48px);
+    padding: clamp(18px, 2vw, 28px);
+    box-sizing: border-box;
+}
+
+.menu-left {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(18px, 3vh, 34px);
+    padding: clamp(22px, 3vw, 36px);
+    min-height: 100%;
+    box-sizing: border-box;
+}
+
+.logo-frame {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: clamp(90px, 14vh, 150px);
+    max-width: 100%;
+}
+
+.game-logo {
+    width: min(100%, 300px);
+    height: auto;
+    display: block;
+    object-fit: contain;
+}
+
+.menu-nav {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(14px, 2.2vh, 24px);
+    align-items: flex-start;
+    padding-left: clamp(0px, 1vw, 8px);
+    width: 100%;
+}
+
+.menu-item {
+    width: var(--menu-item-width);
+    height: 52px;
+    min-height: 52px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-radius: 18px;
+    background: rgba(8, 12, 18, 0.22);
+    color: var(--text-main);
+    font: inherit;
+    font-size: clamp(1rem, 1.2vw, 1.2rem);
     cursor: pointer;
-    border: 4px solid black;
-    background-color: gray;
-    padding-bottom: 10px;
-    transition: 0.1s ease-in-out;
-    user-select: none;
+    transition:
+        transform 180ms ease,
+        background 180ms ease,
+        border-color 180ms ease,
+        box-shadow 180ms ease;
+    backdrop-filter: blur(4px);
+    box-sizing: border-box;
 }
 
-.button {
-    background-color: #dddddd;
-    border: 4px solid #fff;
-    padding: 3px 8px;
+.menu-item:hover {
+    transform: translateX(6px);
+    background: rgba(8, 12, 18, 0.34);
+    border-color: rgba(122, 215, 255, 0.45);
+    box-shadow: 0 0 18px rgba(122, 215, 255, 0.12);
 }
 
-.button span {
-    font-size: 1.2em;
-    letter-spacing: 1px;
+.new-game-wrap {
+    position: relative;
+    width: fit-content;
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
-.box-button:active {
-    padding: 0;
-    margin-bottom: 10px;
-    transform: translateY(10px);
+.player-name-input {
+    width: var(--menu-item-width);
+    height: 52px;
+    min-height: 52px;
+    box-sizing: border-box;
+    padding: 0 14px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-radius: 18px;
+    background: rgba(8, 12, 18, 0.22);
+    color: var(--text-main);
+    font: inherit;
+    font-size: clamp(1rem, 1.2vw, 1.2rem);
+    outline: none;
+    backdrop-filter: blur(4px);
+}
+
+.player-name-input::placeholder {
+    color: rgba(242, 234, 223, 0.55);
+}
+
+.player-name-input:focus {
+    border-color: rgba(122, 215, 255, 0.55);
+    box-shadow: 0 0 18px rgba(122, 215, 255, 0.12);
+}
+
+.player-name-input[hidden] {
+    display: none;
+}
+
+.menu-right {
+    position: relative;
+    min-height: 100%;
+}
+
+.exit-title {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-size: clamp(2rem, 4vw, 4rem);
+}
+
+@media (max-width: 900px) {
+    body {
+        overflow: auto;
+    }
+
+    .menu-screen {
+        grid-template-columns: 1fr;
+    }
+
+    .menu-right {
+        min-height: 220px;
+    }
+
+    .menu-nav {
+        align-items: stretch;
+    }
+
+    .menu-item {
+        width: var(--menu-item-width);
+    }
+
+    .new-game-wrap {
+        width: fit-content;
+        flex-direction: row;
+        align-items: center;
+        flex-wrap: nowrap;
+    }
+
+    .player-name-input {
+        width: var(--menu-item-width);
+        flex: 0 0 var(--menu-item-width);
+        min-width: 0;
+    }
 }

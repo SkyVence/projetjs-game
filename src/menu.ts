@@ -1,35 +1,39 @@
-// Importer le CSS ici :
+import "../index.css";
 
-import "../menu.css";
-
-// Les boutons sont à coder ici :
+const GameLogo = document.createElement("img");
+GameLogo.src = "../src/assets/villain-dungeon-logo.png";
+GameLogo.className = "game-logo";
 
 const ContinueBtn = document.createElement("button");
-ContinueBtn.className = "box-button";
-ContinueBtn.innerHTML = "<span>Continue Game</span>";
+ContinueBtn.className = "menu-item";
+ContinueBtn.textContent = "Continue";
 
 const NewGameBtn = document.createElement("button");
-NewGameBtn.className = "box-button";
-NewGameBtn.innerHTML = "<span>New Game</span>";
+NewGameBtn.className = "menu-item";
+NewGameBtn.textContent = "New Game";
 
 const SettingsBtn = document.createElement("button");
-SettingsBtn.className = "box-button";
-SettingsBtn.innerHTML = "<span>Settings</span>";
+SettingsBtn.className = "menu-item";
+SettingsBtn.textContent = "Settings";
+
+const CreditsBtn = document.createElement("button");
+CreditsBtn.className = "menu-item";
+CreditsBtn.textContent = "Credits";
 
 const ExitBtn = document.createElement("button");
-ExitBtn.className = "box-button";
-ExitBtn.innerHTML = "<span>Exit</span>";
+ExitBtn.className = "menu-item";
+ExitBtn.textContent = "Exit";
 
-// Les titres sont à coder ici :
+const ExitTitle = document.createElement("h2");
+ExitTitle.className = "exit-title";
+ExitTitle.textContent = "Goodbye !";
 
-const GameTitle = document.createElement("h1");
-GameTitle.textContent = "VillainDungeon";
-
-// Les paragraphes sont à coder ici :
-
-const PatchNote = document.createElement("p");
-PatchNote.textContent = "";
-
-// Tous les exports sont à faire ici :
-
-export { ContinueBtn, NewGameBtn, SettingsBtn, ExitBtn, GameTitle, PatchNote };
+export {
+  ContinueBtn,
+  NewGameBtn,
+  SettingsBtn,
+  ExitBtn,
+  GameLogo,
+  CreditsBtn,
+  ExitTitle,
+};

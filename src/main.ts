@@ -1,55 +1,84 @@
-// import {
-//   ContinueBtn,
-//   NewGameBtn,
-//   SettingsBtn,
-//   ExitBtn,
-//   GameTitle,
-//   PatchNote,
-// } from "@/menu";
-// import { playerNameInput } from "@/input";
-// import { Player } from "@/class/player";
+import {
+  ContinueBtn,
+  NewGameBtn,
+  SettingsBtn,
+  ExitBtn,
+  GameLogo,
+  CreditsBtn,
+  ExitTitle,
+} from "@/menu";
+import { playerNameInput } from "@/input";
+import { Player } from "@/class/player";
 
-// let player: Player;
+let player: Player;
 
-// const app = document.getElementById("app");
-// if (app) {
-//   app.textContent = "Game loading...";
-//   app.appendChild(GameTitle);
-//   app.appendChild(PatchNote);
-//   app.appendChild(ContinueBtn);
-//   app.appendChild(NewGameBtn);
-//   app.appendChild(SettingsBtn);
-//   app.appendChild(ExitBtn);
+playerNameInput.hidden = true;
 
-//   // Attach directly to the imported element
-//   NewGameBtn.addEventListener("click", () => {
-//     if (!playerNameInput.isConnected) {
-//       app.appendChild(playerNameInput);
-//     }
-//     playerNameInput.focus();
-//   });
+const app = document.getElementById("app");
 
-//   playerNameInput.addEventListener("keydown", (e) => {
-//     if (e.key === "Enter") {
-//       const playerNameValue = playerNameInput.value.trim();
-//       if (playerNameValue) {
-//         player = new Player(playerNameValue);
-//         app.textContent = `Hello, ${player.getPlayerName()}!`;
-//       }
-//     }
-//   });
-// }
+if (app) {
+  const menuScreen = document.createElement("div");
+  menuScreen.className = "menu-screen";
 
-import { Router } from "@/router/class/router";
-import { HomeView, LevelView } from "@/router/examples/";
+  const menuLeft = document.createElement("section");
+  menuLeft.className = "menu-left";
 
-const router = new Router(
-  [
-    { path: /^\/$/, view: HomeView },
-    { path: /^\/level\/(?<id>\d+)$/, view: LevelView },
-  ],
-  "#app"
-);
+  const menuRight = document.createElement("aside");
+  menuRight.className = "menu-right";
 
-router.enableLinks();
-router.handleLocation();
+  const logoFrame = document.createElement("div");
+  logoFrame.className = "logo-frame";
+
+  const menuNav = document.createElement("nav");
+  menuNav.className = "menu-nav";
+
+  const newGameWrap = document.createElement("div");
+  newGameWrap.className = "new-game-wrap";
+  newGameWrap.append(NewGameBtn, playerNameInput);
+
+  logoFrame.appendChild(GameLogo);
+  menuNav.append(ContinueBtn, newGameWrap, SettingsBtn, CreditsBtn, ExitBtn);
+
+  menuLeft.append(logoFrame, menuNav);
+  menuScreen.append(menuLeft, menuRight);
+  app.appendChild(menuScreen);
+
+  ExitBtn.addEventListener("click", () => {
+    if (confirm("Quitter VillainDungeon ?")) {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      }
+      app.innerHTML = "";
+      app.appendChild(ExitTitle);
+    }
+  });
+
+  NewGameBtn.addEventListener("click", () => {
+    playerNameInput.hidden = !playerNameInput.hidden;
+    if (!playerNameInput.hidden) {
+      playerNameInput.focus();
+    }
+  });
+
+  playerNameInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      const playerNameValue = playerNameInput.value.trim();
+      if (playerNameValue) {
+        player = new Player(playerNameValue);
+        app.textContent = `Hello, ${player.getPlayerName()}!`;
+      }
+    }
+  });
+
+  CreditsBtn.addEventListener("click", () => {
+    app.textContent = "Credits";
+  });
+
+  ContinueBtn.addEventListener("click", () => {
+    app.textContent = "Hello !";
+  });
+
+  SettingsBtn.addEventListener("click", () => {
+    app.textContent = "Settings";
+  });
+}
