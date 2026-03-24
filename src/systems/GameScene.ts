@@ -147,6 +147,8 @@ export class GameScene {
         this.lastMovementInput,
       );
     }
+
+    this.renderer.drawFPS(1 / _deltaTime);
   }
 
   destroy(): void {

@@ -87,7 +87,7 @@ export class CanvasRenderer {
     }
   }
 
-  drawGrid(gridSize: number = 32, color: string = "#222"): void {
+  drawGrid(gridSize: number = 32, color: string = "#333"): void {
     this.ctx.strokeStyle = color;
     this.ctx.lineWidth = 0.5;
 
@@ -104,6 +104,12 @@ export class CanvasRenderer {
       this.ctx.lineTo(this.canvas.width, y);
       this.ctx.stroke();
     }
+  }
+
+  drawFPS(fps: number): void {
+    this.ctx.fillStyle = "#00ff00";
+    this.ctx.font = "bold 14px Arial";
+    this.ctx.fillText(`FPS: ${Math.round(fps)}`, 10, 20);
   }
 
   getDimensions(): { width: number; height: number } {
