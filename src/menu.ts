@@ -51,13 +51,24 @@ Object.assign(SettingsBtn.style, {
   height: "60px",
 });
 
+const CreditsBtn = document.createElement("button");
+CreditsBtn.className = "box-button";
+CreditsBtn.innerHTML = "<span>Credits</span>";
+Object.assign(CreditsBtn.style, {
+  position: "absolute" as const,
+  left: "100px",
+  top: "400px",
+  minWidth: "clamp(150px, 20vw, 200px)",
+  height: "60px",
+});
+
 const ExitBtn = document.createElement("button");
 ExitBtn.className = "box-button";
 ExitBtn.innerHTML = "<span>Exit</span>";
 Object.assign(ExitBtn.style, {
   position: "absolute" as const,
   left: "100px",
-  top: "400px",
+  top: "500px",
   minWidth: "clamp(150px, 20vw, 200px)",
   height: "60px",
 });
@@ -93,5 +104,6 @@ export {
   // GameTitle,
   PatchNote,
   GameLogo,
+  CreditsBtn,
   ExitTitle,
 };

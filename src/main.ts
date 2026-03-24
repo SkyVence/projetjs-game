@@ -6,6 +6,7 @@ import {
   SettingsBtn,
   ExitBtn,
   GameLogo,
+  CreditsBtn,
   ExitTitle,
 } from "@/menu";
 import { playerNameInput } from "@/input";
@@ -21,6 +22,7 @@ if (app) {
   app.appendChild(ContinueBtn);
   app.appendChild(NewGameBtn);
   app.appendChild(SettingsBtn);
+  app.appendChild(CreditsBtn);
   app.appendChild(ExitBtn);
 
   // Bouton afin de quitter le jeu :
@@ -57,6 +59,26 @@ if (app) {
         app.textContent = `Hello, ${player.getPlayerName()}!`;
       }
     }
+  });
+
+  // Bouton afin d'afficher les crédits :
+
+  CreditsBtn.addEventListener("click", () => {
+    app.textContent = "Credits";
+  });
+
+  // Bouton afin de continuer une partie :
+
+  ContinueBtn.addEventListener("click", () => {
+    // if (player) {
+    app.textContent = `Hello !`;
+    // }
+  });
+
+  // Bouton afin d'aller dans les paramètres :
+
+  SettingsBtn.addEventListener("click", () => {
+    app.textContent = "Settings";
   });
 }
 
