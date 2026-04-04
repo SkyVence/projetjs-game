@@ -32,6 +32,10 @@ export class GameScene {
   private combatOverlay: HTMLDivElement | null = null;
   private combatMessage: HTMLParagraphElement | null = null;
   private combatStats: HTMLDivElement | null = null;
+  private timingWrap: HTMLDivElement | null = null;
+  private timingTrack: HTMLDivElement | null = null;
+  private timingZone: HTMLDivElement | null = null;
+  private timingCursor: HTMLDivElement | null = null;
   private attackBtn: HTMLButtonElement | null = null;
   private itemBtn: HTMLButtonElement | null = null;
   private runBtn: HTMLButtonElement | null = null;
@@ -41,6 +45,15 @@ export class GameScene {
   private pendingStart = false;
   private lastSafePosition = { x: 0, y: 0 };
   private potionCount = 3;
+  private timingActive = false;
+  private timingAnimation: number | null = null;
+  private timingStart = 0;
+  private timingDuration = 1200;
+  private timingZoneStart = 0.25;
+  private timingZoneWidth = 0.2;
+  private timingCursorPosition = 0;
+  private waitingTimingResult = false;
+  private readonly enemyParryChance = 0.25;
 
   private readonly PLAYER_SPEED = 150;
   private readonly TILE_SIZE = 32;
@@ -205,6 +218,22 @@ export class GameScene {
     this.combatStats = document.createElement("div");
     this.combatStats.className = "combat-stats";
 
+    this.timingWrap = document.createElement("div");
+    this.timingWrap.className = "timing-wrap";
+    this.timingWrap.hidden = true;
+
+    this.timingTrack = document.createElement("div");
+    this.timingTrack.className = "timing-track";
+
+    this.timingZone = document.createElement("div");
+    this.timingZone.className = "timing-zone";
+
+    this.timingCursor = document.createElement("div");
+    this.timingCursor.className = "timing-cursor";
+
+    this.timingTrack.append(this.timingZone, this.timingCursor);
+    this.timingWrap.appendChild(this.timingTrack);
+
     this.combatMessage = document.createElement("p");
     this.combatMessage.className = "combat-message";
 
@@ -226,9 +255,10 @@ export class GameScene {
     this.attackBtn.addEventListener("click", () => this.playerAttack());
     this.itemBtn.addEventListener("click", () => this.usePotion());
     this.runBtn.addEventListener("click", () => this.tryRun());
+    this.timingWrap.addEventListener("click", () => this.resolveTimingAttack());
 
     actions.append(this.attackBtn, this.itemBtn, this.runBtn);
-    frame.append(title, this.combatStats, this.combatMessage, actions);
+    frame.append(title, this.combatStats, this.timingWrap, this.combatMessage, actions);
     this.combatOverlay.appendChild(frame);
     this.container.appendChild(this.combatOverlay);
   }
@@ -249,11 +279,113 @@ export class GameScene {
 
   private async playerAttack(): Promise<void> {
     if (!this.player || !this.currentEnemy || this.actionLocked) return;
+    if (!this.timingActive) {
+      this.startTimingAttack();
+      return;
+    }
+
+    this.resolveTimingAttack();
+  }
+
+  private startTimingAttack(): void {
+    if (!this.player || !this.currentEnemy || this.actionLocked) return;
+
+    this.waitingTimingResult = true;
     this.actionLocked = true;
     this.setCombatButtonsDisabled(true);
+    if (this.attackBtn) {
+      this.attackBtn.disabled = false;
+      this.attackBtn.textContent = "Valider";
+    }
 
-    const damage = this.player.attackTarget(this.currentEnemy);
-    this.setCombatMessage(`${this.player.getPlayerName()} attaque et inflige ${damage} dégâts.`);
+    this.timingDuration = 1200;
+    this.timingZoneWidth = 0.16 + Math.random() * 0.14;
+    this.timingZoneStart = 0.15 + Math.random() * (0.78 - this.timingZoneWidth);
+    this.timingCursorPosition = 0;
+    this.timingStart = performance.now();
+    this.timingActive = true;
+
+    if (this.timingWrap) {
+      this.timingWrap.hidden = false;
+    }
+
+    this.refreshTimingUI();
+    this.setCombatMessage("Appuie au bon moment dans la zone verte.");
+    this.startTimingLoop();
+  }
+
+  private startTimingLoop(): void {
+    if (this.timingAnimation !== null) {
+      cancelAnimationFrame(this.timingAnimation);
+    }
+
+    const tick = (now: number) => {
+      if (!this.timingActive) return;
+
+      const elapsed = now - this.timingStart;
+      const progress = Math.min(elapsed / this.timingDuration, 1);
+      this.timingCursorPosition = progress;
+      this.refreshTimingUI();
+
+      if (progress >= 1) {
+        this.resolveTimingAttack();
+        return;
+      }
+
+      this.timingAnimation = requestAnimationFrame(tick);
+    };
+
+    this.timingAnimation = requestAnimationFrame(tick);
+  }
+
+  private resolveTimingAttack(): void {
+    if (!this.player || !this.currentEnemy || !this.timingActive || !this.waitingTimingResult) return;
+
+    this.timingActive = false;
+    this.waitingTimingResult = false;
+
+    if (this.timingAnimation !== null) {
+      cancelAnimationFrame(this.timingAnimation);
+      this.timingAnimation = null;
+    }
+
+    const inGreen =
+      this.timingCursorPosition >= this.timingZoneStart &&
+      this.timingCursorPosition <= this.timingZoneStart + this.timingZoneWidth;
+
+    const baseDamage = this.player.getAttackPower();
+    const damageMultiplier = inGreen ? 1.6 : 0.85;
+    const parried = Math.random() < this.enemyParryChance;
+    const finalDamage = parried ? Math.max(1, Math.floor(baseDamage * 0.35)) : Math.max(1, Math.floor(baseDamage * damageMultiplier));
+
+    if (this.timingWrap) {
+      this.timingWrap.hidden = true;
+    }
+    if (this.attackBtn) {
+      this.attackBtn.textContent = "Attaquer";
+    }
+
+    this.setCombatMessage(
+      parried
+        ? `${this.currentEnemy.name} pare partiellement l'attaque !`
+        : inGreen
+          ? "Parfait !"
+          : "Raté de peu...",
+    );
+
+    this.finishPlayerAttack(finalDamage, parried);
+  }
+
+  private async finishPlayerAttack(finalDamage: number, parried: boolean): Promise<void> {
+    if (!this.player || !this.currentEnemy) return;
+    this.setCombatButtonsDisabled(true);
+
+    const damage = this.currentEnemy.takeDamage(finalDamage);
+    this.setCombatMessage(
+      parried
+        ? `${this.currentEnemy.name} pare et subit ${damage} dégâts.`
+        : `Vous infligez ${damage} dégâts.`,
+    );
     this.refreshCombatUI();
 
     await this.delay(350);
@@ -268,8 +400,17 @@ export class GameScene {
     }
 
     const enemy = this.currentEnemy;
+    const enemyParried = Math.random() < 0.2;
     const counterDamage = enemy.attackTarget(this.player);
-    this.setCombatMessage(`${enemy.name} contre-attaque pour ${counterDamage} dégâts.`);
+    const reducedCounter = enemyParried ? Math.max(1, Math.floor(counterDamage * 0.5)) : counterDamage;
+
+    if (enemyParried) {
+      this.setCombatMessage(`${enemy.name} contre-attaque, mais votre garde réduit les dégâts.`);
+    } else {
+      this.setCombatMessage(`${enemy.name} contre-attaque pour ${reducedCounter} dégâts.`);
+    }
+
+    this.player.takeDamage(Math.max(1, reducedCounter));
     this.refreshCombatUI();
 
     await this.delay(350);
@@ -360,9 +501,20 @@ export class GameScene {
     this.combatOverlay = null;
     this.combatMessage = null;
     this.combatStats = null;
+    this.timingWrap = null;
+    this.timingTrack = null;
+    this.timingZone = null;
+    this.timingCursor = null;
     this.attackBtn = null;
     this.itemBtn = null;
     this.runBtn = null;
+    this.timingActive = false;
+    this.waitingTimingResult = false;
+
+    if (this.timingAnimation !== null) {
+      cancelAnimationFrame(this.timingAnimation);
+      this.timingAnimation = null;
+    }
 
     this.setCombatButtonsDisabled(false);
 
@@ -403,6 +555,14 @@ export class GameScene {
     if (this.runBtn) this.runBtn.disabled = disabled;
   }
 
+  private refreshTimingUI(): void {
+    if (!this.timingTrack || !this.timingZone || !this.timingCursor) return;
+
+    this.timingZone.style.left = `${this.timingZoneStart * 100}%`;
+    this.timingZone.style.width = `${this.timingZoneWidth * 100}%`;
+    this.timingCursor.style.left = `${this.timingCursorPosition * 100}%`;
+  }
+
   private isColliding(a: Entity, b: Entity): boolean {
     const aPos = a.getComponent<Position>("position");
     const bPos = b.getComponent<Position>("position");
@@ -422,6 +582,10 @@ export class GameScene {
 
   destroy(): void {
     this.gameLoop.stop();
+    if (this.timingAnimation !== null) {
+      cancelAnimationFrame(this.timingAnimation);
+      this.timingAnimation = null;
+    }
     this.combatOverlay?.remove();
     this.container.innerHTML = "";
   }
