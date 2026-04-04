@@ -36,6 +36,10 @@ export class Enemy extends Entity {
     return this.template.color;
   }
 
+  public get behavior(): EnemyTemplate["behavior"] {
+    return this.template.behavior;
+  }
+
   public isAlive(): boolean {
     return this.currentHp > 0;
   }

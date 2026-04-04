@@ -30,8 +30,18 @@ export class GameScene {
   private enemies: Entity[] = [];
   private player: Player | null = null;
   private combatOverlay: HTMLDivElement | null = null;
+  private combatBackdrop: HTMLDivElement | null = null;
+  private combatPanel: HTMLDivElement | null = null;
+  private combatHeader: HTMLDivElement | null = null;
+  private combatLog: HTMLDivElement | null = null;
+  private combatHint: HTMLDivElement | null = null;
   private combatMessage: HTMLParagraphElement | null = null;
   private combatStats: HTMLDivElement | null = null;
+  private playerHpFill: HTMLDivElement | null = null;
+  private enemyHpFill: HTMLDivElement | null = null;
+  private playerHpText: HTMLSpanElement | null = null;
+  private enemyHpText: HTMLSpanElement | null = null;
+  private enemyNameLabel: HTMLSpanElement | null = null;
   private timingWrap: HTMLDivElement | null = null;
   private timingTrack: HTMLDivElement | null = null;
   private timingZone: HTMLDivElement | null = null;
@@ -45,14 +55,20 @@ export class GameScene {
   private pendingStart = false;
   private lastSafePosition = { x: 0, y: 0 };
   private potionCount = 3;
+  private combatSequenceRunning = false;
   private timingActive = false;
   private timingAnimation: number | null = null;
+  private timingLastFrame = 0;
   private timingStart = 0;
   private timingDuration = 1200;
   private timingZoneStart = 0.25;
   private timingZoneWidth = 0.2;
   private timingCursorPosition = 0;
   private waitingTimingResult = false;
+  private spaceHeld = false;
+  private combatKeyDownHandler: ((e: KeyboardEvent) => void) | null = null;
+  private combatKeyUpHandler: ((e: KeyboardEvent) => void) | null = null;
+  private timingResetCallback: (() => void) | null = null;
   private readonly enemyParryChance = 0.25;
 
   private readonly PLAYER_SPEED = 150;
@@ -208,15 +224,71 @@ export class GameScene {
     this.combatOverlay.className = "combat-overlay";
     this.combatOverlay.hidden = true;
 
-    const frame = document.createElement("div");
-    frame.className = "combat-frame";
+    this.combatBackdrop = document.createElement("div");
+    this.combatBackdrop.className = "combat-backdrop";
+
+    this.combatPanel = document.createElement("div");
+    this.combatPanel.className = "combat-frame";
+
+    this.combatHeader = document.createElement("div");
+    this.combatHeader.className = "combat-header";
+
+    const titleBlock = document.createElement("div");
+    titleBlock.className = "combat-title-block";
 
     const title = document.createElement("h2");
     title.className = "combat-title";
     title.textContent = "Combat";
 
+    const subtitle = document.createElement("p");
+    subtitle.className = "combat-subtitle";
+    subtitle.textContent = "Tour par tour";
+
+    titleBlock.append(title, subtitle);
+
+    this.enemyNameLabel = document.createElement("span");
+    this.enemyNameLabel.className = "combat-enemy-name";
+    this.enemyNameLabel.textContent = "";
+
+    this.combatHeader.append(titleBlock, this.enemyNameLabel);
+
     this.combatStats = document.createElement("div");
     this.combatStats.className = "combat-stats";
+
+    const statsCards = document.createElement("div");
+    statsCards.className = "combat-stats-cards";
+
+    const playerCard = document.createElement("div");
+    playerCard.className = "combat-card combat-card-player";
+    const playerLabel = document.createElement("div");
+    playerLabel.className = "combat-card-label";
+    playerLabel.textContent = this.player?.getPlayerName() ?? "Joueur";
+    this.playerHpText = document.createElement("span");
+    this.playerHpText.className = "combat-card-value";
+    this.playerHpText.textContent = "";
+    const playerBar = document.createElement("div");
+    playerBar.className = "combat-hp-bar";
+    this.playerHpFill = document.createElement("div");
+    this.playerHpFill.className = "combat-hp-fill";
+    playerBar.appendChild(this.playerHpFill);
+    playerCard.append(playerLabel, this.playerHpText, playerBar);
+
+    const enemyCard = document.createElement("div");
+    enemyCard.className = "combat-card combat-card-enemy";
+    const enemyLabel = document.createElement("div");
+    enemyLabel.className = "combat-card-label";
+    enemyLabel.textContent = "Enemy";
+    this.enemyHpText = document.createElement("span");
+    this.enemyHpText.className = "combat-card-value";
+    this.enemyHpText.textContent = "";
+    const enemyBar = document.createElement("div");
+    enemyBar.className = "combat-hp-bar";
+    this.enemyHpFill = document.createElement("div");
+    this.enemyHpFill.className = "combat-hp-fill combat-hp-fill-enemy";
+    enemyBar.appendChild(this.enemyHpFill);
+    enemyCard.append(enemyLabel, this.enemyHpText, enemyBar);
+
+    statsCards.append(playerCard, enemyCard);
 
     this.timingWrap = document.createElement("div");
     this.timingWrap.className = "timing-wrap";
@@ -237,6 +309,13 @@ export class GameScene {
     this.combatMessage = document.createElement("p");
     this.combatMessage.className = "combat-message";
 
+    this.combatLog = document.createElement("div");
+    this.combatLog.className = "combat-log";
+
+    this.combatHint = document.createElement("div");
+    this.combatHint.className = "combat-hint";
+    this.combatHint.textContent = "Maintiens Espace pour valider au bon moment.";
+
     const actions = document.createElement("div");
     actions.className = "combat-actions";
 
@@ -255,11 +334,11 @@ export class GameScene {
     this.attackBtn.addEventListener("click", () => this.playerAttack());
     this.itemBtn.addEventListener("click", () => this.usePotion());
     this.runBtn.addEventListener("click", () => this.tryRun());
-    this.timingWrap.addEventListener("click", () => this.resolveTimingAttack());
 
     actions.append(this.attackBtn, this.itemBtn, this.runBtn);
-    frame.append(title, this.combatStats, this.timingWrap, this.combatMessage, actions);
-    this.combatOverlay.appendChild(frame);
+    this.combatLog.append(this.combatMessage);
+    this.combatPanel.append(this.combatHeader, statsCards, this.combatStats, this.timingWrap, this.combatHint, this.combatLog, actions);
+    this.combatOverlay.append(this.combatBackdrop, this.combatPanel);
     this.container.appendChild(this.combatOverlay);
   }
 
@@ -273,8 +352,62 @@ export class GameScene {
       this.combatOverlay.hidden = false;
     }
 
-    this.setCombatMessage(`Un ${enemy.name} apparaît !`);
+    this.setEnemyLabel(enemy.name);
     this.refreshCombatUI();
+    this.playCombatIntro(enemy);
+    this.bindCombatControls();
+  }
+
+  private bindCombatControls(): void {
+    if (this.combatKeyDownHandler || this.combatKeyUpHandler) return;
+
+    this.combatKeyDownHandler = (e: KeyboardEvent) => {
+      if (e.code !== "Space") return;
+      if (this.inCombat && !this.spaceHeld) {
+        e.preventDefault();
+        this.spaceHeld = true;
+        if (this.timingActive) {
+          this.resolveTimingAttack();
+        }
+      }
+    };
+
+    this.combatKeyUpHandler = (e: KeyboardEvent) => {
+      if (e.code !== "Space") return;
+      e.preventDefault();
+      this.spaceHeld = false;
+      if (this.timingActive) {
+        this.resetTimingCursor();
+      }
+    };
+
+    window.addEventListener("keydown", this.combatKeyDownHandler, { passive: false });
+    window.addEventListener("keyup", this.combatKeyUpHandler, { passive: false });
+  }
+
+  private unbindCombatControls(): void {
+    if (this.combatKeyDownHandler) {
+      window.removeEventListener("keydown", this.combatKeyDownHandler);
+      this.combatKeyDownHandler = null;
+    }
+    if (this.combatKeyUpHandler) {
+      window.removeEventListener("keyup", this.combatKeyUpHandler);
+      this.combatKeyUpHandler = null;
+    }
+  }
+
+  private async playCombatIntro(enemy: Enemy): Promise<void> {
+    if (this.combatSequenceRunning) return;
+    this.combatSequenceRunning = true;
+    this.actionLocked = true;
+    this.setCombatButtonsDisabled(true);
+
+    await this.pushCombatMessage(`Un ${enemy.name} apparaît !`, 700);
+    await this.pushCombatMessage("Prépare ton attaque...", 450);
+
+    this.actionLocked = false;
+    this.setCombatButtonsDisabled(false);
+    this.combatSequenceRunning = false;
   }
 
   private async playerAttack(): Promise<void> {
@@ -308,6 +441,9 @@ export class GameScene {
     if (this.timingWrap) {
       this.timingWrap.hidden = false;
     }
+    if (this.combatHint) {
+      this.combatHint.hidden = false;
+    }
 
     this.refreshTimingUI();
     this.setCombatMessage("Appuie au bon moment dans la zone verte.");
@@ -323,11 +459,11 @@ export class GameScene {
       if (!this.timingActive) return;
 
       const elapsed = now - this.timingStart;
-      const progress = Math.min(elapsed / this.timingDuration, 1);
-      this.timingCursorPosition = progress;
+      const target = Math.min(elapsed / this.timingDuration, 1);
+      this.timingCursorPosition = target;
       this.refreshTimingUI();
 
-      if (progress >= 1) {
+      if (target >= 1) {
         this.resolveTimingAttack();
         return;
       }
@@ -338,11 +474,19 @@ export class GameScene {
     this.timingAnimation = requestAnimationFrame(tick);
   }
 
+  private resetTimingCursor(): void {
+    this.timingStart = performance.now();
+    this.timingCursorPosition = 0;
+    this.refreshTimingUI();
+    this.setCombatMessage("Relâche et recommence.");
+  }
+
   private resolveTimingAttack(): void {
     if (!this.player || !this.currentEnemy || !this.timingActive || !this.waitingTimingResult) return;
 
     this.timingActive = false;
     this.waitingTimingResult = false;
+    this.spaceHeld = false;
 
     if (this.timingAnimation !== null) {
       cancelAnimationFrame(this.timingAnimation);
@@ -358,9 +502,7 @@ export class GameScene {
     const parried = Math.random() < this.enemyParryChance;
     const finalDamage = parried ? Math.max(1, Math.floor(baseDamage * 0.35)) : Math.max(1, Math.floor(baseDamage * damageMultiplier));
 
-    if (this.timingWrap) {
-      this.timingWrap.hidden = true;
-    }
+    this.hideTimingUI();
     if (this.attackBtn) {
       this.attackBtn.textContent = "Attaquer";
     }
@@ -380,15 +522,16 @@ export class GameScene {
     if (!this.player || !this.currentEnemy) return;
     this.setCombatButtonsDisabled(true);
 
+    await this.pushCombatMessage(parried ? "La garde ennemie tremble..." : "Impact !", 220);
+
     const damage = this.currentEnemy.takeDamage(finalDamage);
-    this.setCombatMessage(
+    await this.pushCombatMessage(
       parried
         ? `${this.currentEnemy.name} pare et subit ${damage} dégâts.`
         : `Vous infligez ${damage} dégâts.`,
+      650,
     );
     this.refreshCombatUI();
-
-    await this.delay(350);
 
     if (!this.currentEnemy.isAlive()) {
       this.setCombatMessage(`${this.currentEnemy.name} est vaincu !`);
@@ -400,17 +543,12 @@ export class GameScene {
     }
 
     const enemy = this.currentEnemy;
-    const enemyParried = Math.random() < 0.2;
-    const counterDamage = enemy.attackTarget(this.player);
-    const reducedCounter = enemyParried ? Math.max(1, Math.floor(counterDamage * 0.5)) : counterDamage;
+    const enemyResult = this.resolveEnemyTurn(enemy);
 
-    if (enemyParried) {
-      this.setCombatMessage(`${enemy.name} contre-attaque, mais votre garde réduit les dégâts.`);
-    } else {
-      this.setCombatMessage(`${enemy.name} contre-attaque pour ${reducedCounter} dégâts.`);
+    await this.pushCombatMessage(enemyResult.message, 650);
+    if (enemyResult.damage > 0) {
+      this.player.takeDamage(enemyResult.damage);
     }
-
-    this.player.takeDamage(Math.max(1, reducedCounter));
     this.refreshCombatUI();
 
     await this.delay(350);
@@ -426,14 +564,58 @@ export class GameScene {
     this.setCombatButtonsDisabled(false);
   }
 
+  private resolveEnemyTurn(enemy: Enemy): { damage: number; message: string } {
+    const roll = Math.random();
+    const baseDamage = enemy.attack;
+
+    if (enemy.behavior === "defensive") {
+      if (roll < 0.35) {
+        return {
+          damage: 0,
+          message: `${enemy.name} se protège et prépare son prochain coup.`,
+        };
+      }
+
+      return {
+        damage: Math.max(1, Math.floor(baseDamage * 0.8)),
+        message: `${enemy.name} attaque prudemment.`,
+      };
+    }
+
+    if (enemy.behavior === "random") {
+      if (roll < 0.2) {
+        return {
+          damage: 0,
+          message: `${enemy.name} hésite et ne fait rien.`,
+        };
+      }
+
+      if (roll < 0.5) {
+        return {
+          damage: Math.max(1, Math.floor(baseDamage * 0.7)),
+          message: `${enemy.name} attaque faiblement.`,
+        };
+      }
+
+      return {
+        damage: Math.max(1, Math.floor(baseDamage * 1.15)),
+        message: `${enemy.name} frappe violemment !`,
+      };
+    }
+
+    return {
+      damage: baseDamage,
+      message: `${enemy.name} contre-attaque !`,
+    };
+  }
+
   private async usePotion(): Promise<void> {
     if (!this.player || this.actionLocked) return;
     this.actionLocked = true;
     this.setCombatButtonsDisabled(true);
 
     if (this.potionCount <= 0) {
-      this.setCombatMessage("Plus de potions.");
-      await this.delay(500);
+      await this.pushCombatMessage("Plus de potions.", 500);
       this.actionLocked = false;
       this.setCombatButtonsDisabled(false);
       return;
@@ -441,10 +623,9 @@ export class GameScene {
 
     this.potionCount -= 1;
     const healed = this.player.heal(30);
-    this.setCombatMessage(`Potion utilisée : +${healed} PV.`);
+    await this.pushCombatMessage(`Potion utilisée : +${healed} PV.`, 650);
     this.refreshCombatUI();
 
-    await this.delay(350);
     await this.enemyTurnAfterPlayerAction();
   }
 
@@ -453,8 +634,7 @@ export class GameScene {
     this.actionLocked = true;
     this.setCombatButtonsDisabled(true);
 
-    this.setCombatMessage("Vous prenez la fuite !");
-    await this.delay(250);
+    await this.pushCombatMessage("Vous prenez la fuite !", 350);
     this.endCombat(false, true);
   }
 
@@ -498,9 +678,26 @@ export class GameScene {
       this.combatOverlay.remove();
     }
 
+    if (this.timingWrap) {
+      this.timingWrap.hidden = true;
+    }
+    if (this.combatHint) {
+      this.combatHint.hidden = true;
+    }
+
     this.combatOverlay = null;
+    this.combatBackdrop = null;
+    this.combatPanel = null;
+    this.combatHeader = null;
+    this.combatLog = null;
+    this.combatHint = null;
     this.combatMessage = null;
     this.combatStats = null;
+    this.playerHpFill = null;
+    this.enemyHpFill = null;
+    this.playerHpText = null;
+    this.enemyHpText = null;
+    this.enemyNameLabel = null;
     this.timingWrap = null;
     this.timingTrack = null;
     this.timingZone = null;
@@ -510,6 +707,10 @@ export class GameScene {
     this.runBtn = null;
     this.timingActive = false;
     this.waitingTimingResult = false;
+    this.combatSequenceRunning = false;
+    this.spaceHeld = false;
+
+    this.unbindCombatControls();
 
     if (this.timingAnimation !== null) {
       cancelAnimationFrame(this.timingAnimation);
@@ -532,20 +733,44 @@ export class GameScene {
     if (!this.player || !this.combatStats) return;
 
     const enemy = this.currentEnemy;
-    const enemyLine = enemy
-      ? `<strong>${enemy.name}</strong> PV ${enemy.currentHp}/${enemy.template.maxHp}`
-      : "Aucun ennemi";
+    const playerHpRatio = this.player.stats.hp / this.player.getMaxHp();
+    if (this.playerHpFill) {
+      this.playerHpFill.style.width = `${Math.max(0, playerHpRatio) * 100}%`;
+    }
+    if (this.playerHpText) {
+      this.playerHpText.textContent = `${this.player.stats.hp}/${this.player.getMaxHp()} PV`;
+    }
+
+    if (enemy) {
+      const enemyHpRatio = enemy.currentHp / enemy.template.maxHp;
+      if (this.enemyHpFill) {
+        this.enemyHpFill.style.width = `${Math.max(0, enemyHpRatio) * 100}%`;
+      }
+      if (this.enemyHpText) {
+        this.enemyHpText.textContent = `${enemy.currentHp}/${enemy.template.maxHp} PV`;
+      }
+      this.setEnemyLabel(enemy.name);
+    }
 
     this.combatStats.innerHTML = `
-      <div>Joueur : PV ${this.player.stats.hp}/${this.player.getMaxHp()} | ATQ ${this.player.getAttackPower()} | DEF ${this.player.getDefensePower()} | Niveau ${this.player.stats.level}</div>
-      <div>${enemyLine}</div>
-      <div>Potions : ${this.potionCount}</div>
+      <div class="combat-meta">ATQ ${this.player.getAttackPower()} • DEF ${this.player.getDefensePower()} • Niveau ${this.player.stats.level} • Potions ${this.potionCount}</div>
     `;
   }
 
   private setCombatMessage(message: string): void {
     if (this.combatMessage) {
       this.combatMessage.textContent = message;
+    }
+  }
+
+  private async pushCombatMessage(message: string, delayMs: number = 700): Promise<void> {
+    this.setCombatMessage(message);
+    await this.delay(delayMs);
+  }
+
+  private setEnemyLabel(name: string): void {
+    if (this.enemyNameLabel) {
+      this.enemyNameLabel.textContent = name;
     }
   }
 
@@ -561,6 +786,12 @@ export class GameScene {
     this.timingZone.style.left = `${this.timingZoneStart * 100}%`;
     this.timingZone.style.width = `${this.timingZoneWidth * 100}%`;
     this.timingCursor.style.left = `${this.timingCursorPosition * 100}%`;
+    this.timingTrack.style.setProperty("--cursor-x", `${this.timingCursorPosition * 100}%`);
+  }
+
+  private hideTimingUI(): void {
+    if (this.timingWrap) this.timingWrap.hidden = true;
+    if (this.combatHint) this.combatHint.hidden = true;
   }
 
   private isColliding(a: Entity, b: Entity): boolean {

@@ -6,6 +6,7 @@ export interface EnemyTemplate {
   defense: number;
   xpReward: number;
   color: string;
+  behavior: "aggressive" | "defensive" | "random";
 }
 
 export const ENEMY_TEMPLATES: EnemyTemplate[] = [
@@ -17,6 +18,7 @@ export const ENEMY_TEMPLATES: EnemyTemplate[] = [
     defense: 2,
     xpReward: 20,
     color: "#ff3b30",
+    behavior: "aggressive",
   },
   {
     id: "goblin-brute",
@@ -26,5 +28,6 @@ export const ENEMY_TEMPLATES: EnemyTemplate[] = [
     defense: 3,
     xpReward: 30,
     color: "#d43b2f",
+    behavior: "aggressive",
   },
 ];
