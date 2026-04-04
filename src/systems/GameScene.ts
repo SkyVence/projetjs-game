@@ -59,14 +59,21 @@ export class GameScene {
   }
 
   initialize(): void {
-    this.player = new Player("Hero");
+    if (!this.player) {
+      throw new Error("Player must be provided before initializing the scene");
+    }
+
     this.player.addComponent(new Position(100, 100));
     this.player.addComponent(new Velocity(0, 0));
-    this.player.addComponent(new Health(100));
+    this.player.addComponent(new Health(this.player.stats.hp, this.player.getMaxHp()));
 
     this.entities.push(this.player);
     this.spawnEnemies();
     this.gameLoop.start();
+  }
+
+  setPlayer(player: Player): void {
+    this.player = player;
   }
 
   private spawnEnemies(): void {

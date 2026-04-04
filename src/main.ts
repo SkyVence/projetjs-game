@@ -11,8 +11,9 @@ import { playerNameInput } from "@/input";
 import { Player } from "@/class/player";
 import { GameScene } from "@/systems/GameScene";
 
-let player: Player;
+let player: Player | null = null;
 let gameScene: GameScene | null = null;
+let menuListenersBound = false;
 
 playerNameInput.hidden = true;
 
@@ -23,6 +24,7 @@ if (app) {
     app.innerHTML = "";
     gameScene?.destroy();
     gameScene = null;
+    playerNameInput.hidden = true;
 
     const menuScreen = document.createElement("div");
     menuScreen.className = "menu-screen";
@@ -50,45 +52,51 @@ if (app) {
     menuScreen.append(menuLeft, menuRight);
     app.appendChild(menuScreen);
 
-    ExitBtn.addEventListener("click", () => {
-      if (confirm("Quitter VillainDungeon ?")) {
-        if (document.fullscreenElement) {
-          document.exitFullscreen();
+    if (!menuListenersBound) {
+      ExitBtn.addEventListener("click", () => {
+        if (confirm("Quitter VillainDungeon ?")) {
+          if (document.fullscreenElement) {
+            document.exitFullscreen();
+          }
+          app.innerHTML = "";
+          app.appendChild(ExitTitle);
         }
-        app.innerHTML = "";
-        app.appendChild(ExitTitle);
-      }
-    });
+      });
 
-    NewGameBtn.addEventListener("click", () => {
-      playerNameInput.hidden = false;
-      playerNameInput.focus();
-    });
+      NewGameBtn.addEventListener("click", () => {
+        playerNameInput.hidden = false;
+        playerNameInput.focus();
+      });
 
-    playerNameInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        const playerNameValue = playerNameInput.value.trim();
-        if (playerNameValue) {
-          player = new Player(playerNameValue);
-          startGame();
+      playerNameInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          const playerNameValue = playerNameInput.value.trim();
+          if (playerNameValue) {
+            player = new Player(playerNameValue);
+            startGame();
+          }
         }
-      }
-    });
+      });
 
-    CreditsBtn.addEventListener("click", () => {
-      app.textContent = "Credits";
-    });
+      CreditsBtn.addEventListener("click", () => {
+        app.textContent = "Credits";
+      });
 
-    ContinueBtn.addEventListener("click", () => {
-      app.textContent = "Hello !";
-    });
+      ContinueBtn.addEventListener("click", () => {
+        app.textContent = "Hello !";
+      });
 
-    SettingsBtn.addEventListener("click", () => {
-      app.textContent = "Settings";
-    });
+      SettingsBtn.addEventListener("click", () => {
+        app.textContent = "Settings";
+      });
+
+      menuListenersBound = true;
+    }
   };
 
   const startGame = () => {
+    if (!player) return;
+
     app.innerHTML = "";
     gameScene = new GameScene(app, {
       viewportWidth: 800,
@@ -96,6 +104,7 @@ if (app) {
       mapWidth: 2400,
       mapHeight: 2400,
     });
+    gameScene.setPlayer(player);
     gameScene.initialize();
 
     const escapeHandler = (e: KeyboardEvent) => {
