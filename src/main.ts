@@ -2,6 +2,8 @@ import { Player } from "@/class/player";
 import { GameScene } from "@/systems/GameScene";
 import { registerRoute, startRouter, navigateTo } from "@/router";
 import { MenuView, ExitTitle } from "@/menu";
+import { MapGenerator } from "@/utils/MapGen";
+import { MapRenderer } from "@/utils/MapRenderer";
 
 let player: Player | null = null;
 let gameScene: GameScene | null = null;
@@ -95,6 +97,19 @@ registerRoute("/settings", SettingsView);
 registerRoute("/exit", ExitView);
 
 const app = document.getElementById("app");
+
 if (app) {
   startRouter(app);
+
+  // Générer et afficher la map immédiatement
+  app.textContent = "";
+
+  const canvas = document.createElement("canvas");
+  app.appendChild(canvas);
+
+  const generator = new MapGenerator({ width: 80, height: 50, maxDepth: 4 });
+  const map = generator.generate();
+
+  const renderer = new MapRenderer(canvas, { tileSize: 16 });
+  renderer.render(map);
 }
