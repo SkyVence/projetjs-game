@@ -257,6 +257,18 @@ export class GameScene {
       this.startCombat(collidedEnemy as Enemy);
     }
 
+    this.updateEnemyMovement(movementStep);
+
+    const collidedEnemy = this.enemies.find((enemy) => this.isColliding(this.player!, enemy as Enemy));
+    if (collidedEnemy) {
+      const playerPosition = this.player.getComponent<Position>("position");
+      if (playerPosition) {
+        playerPosition.x = this.lastSafePosition.x;
+        playerPosition.y = this.lastSafePosition.y;
+      }
+      this.startCombat(collidedEnemy as Enemy);
+    }
+
     if (this.player) {
       this.camera.follow(this.player);
       this.camera.update();

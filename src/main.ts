@@ -20,7 +20,17 @@ function MenuRoute(): HTMLElement {
     },
     onNewGame: (playerName: string) => {
       player = new Player(playerName);
-      navigateTo("/game");
+      startGame(app);
+    },
+    onCredits: () => {
+      app.textContent = "Credits";
+    },
+    onContinue: () => {
+      if (!player) return;
+      startGame(app);
+    },
+    onSettings: () => {
+      app.textContent = "Settings";
     },
     onCredits: () => {
       navigateTo("/credits");
@@ -161,5 +171,5 @@ registerRoutes(routes, cleanups);
 // Start the router
 const app = document.getElementById("app");
 if (app) {
-  startRouter(app);
+  showMenu(app);
 }
