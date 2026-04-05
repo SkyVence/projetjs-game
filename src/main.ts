@@ -41,10 +41,10 @@ function startGame(app: HTMLElement): void {
   gameScene?.destroy();
 
   gameScene = new GameScene(app, {
-    viewportWidth: 800,
-    viewportHeight: 600,
-    mapWidth: 2400,
-    mapHeight: 2400,
+    viewportWidth: 1100,
+    viewportHeight: 700,
+    mapWidth: 3200,
+    mapHeight: 3200,
   });
   gameScene.setPlayer(player);
   gameScene.initialize();

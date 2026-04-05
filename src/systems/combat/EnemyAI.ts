@@ -36,10 +36,15 @@ export class EnemyAI {
 
     const heavyPressureChance = playerHpRatio <= 0.4 ? 0.55 : 0.3;
     const forceHeavyAfterBasics = this.basicChain >= 2;
-    if (forceHeavyAfterBasics || Math.random() < heavyPressureChance) {
+    const isSlime = enemy.name.toLowerCase().includes("slime");
+    const heavyChance = isSlime ? heavyPressureChance * 0.5 : heavyPressureChance;
+    const heavyMultiplier = isSlime
+      ? (playerHpRatio <= 0.4 ? 1.08 : 1.04)
+      : (playerHpRatio <= 0.4 ? 1.2 : 1.14);
+    if (forceHeavyAfterBasics || Math.random() < heavyChance) {
       const action: EnemyAction = {
         type: "attack_heavy",
-        powerMultiplier: playerHpRatio <= 0.4 ? 1.2 : 1.14,
+        powerMultiplier: heavyMultiplier,
         label: "Frappe lourde",
       };
       this.remember(action);
@@ -48,7 +53,7 @@ export class EnemyAI {
 
     const action: EnemyAction = {
       type: "attack_basic",
-      powerMultiplier: 0.88,
+      powerMultiplier: isSlime ? 0.74 : 0.88,
       label: "Attaque rapide",
     };
     this.remember(action);

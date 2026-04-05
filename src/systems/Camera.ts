@@ -42,8 +42,8 @@ export class Camera {
 
   getOffset(): { offsetX: number; offsetY: number } {
     return {
-      offsetX: -Math.round(this.x),
-      offsetY: -Math.round(this.y),
+      offsetX: -this.x,
+      offsetY: -this.y,
     };
   }
 

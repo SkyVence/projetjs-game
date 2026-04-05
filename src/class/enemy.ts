@@ -46,6 +46,14 @@ export class Enemy extends Entity {
     return this.template.behavior;
   }
 
+  public get worldSprite(): EnemyTemplate["worldSprite"] {
+    return this.template.worldSprite;
+  }
+
+  public get combatSprite(): EnemyTemplate["combatSprite"] {
+    return this.template.combatSprite;
+  }
+
   public isAlive(): boolean {
     return this.currentHp > 0;
   }
