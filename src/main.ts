@@ -1,23 +1,24 @@
-import {
-  ContinueBtn,
-  NewGameBtn,
-  SettingsBtn,
-  ExitBtn,
-  GameLogo,
-  CreditsBtn,
-  ExitTitle,
-} from "@/menu";
-import { playerNameInput } from "@/input";
 import { Player } from "@/class/player";
 import { GameScene } from "@/systems/GameScene";
+import { registerRoute, startRouter, navigateTo } from "@/router";
+import { MenuView, ExitTitle } from "@/menu";
 
 let player: Player | null = null;
 let gameScene: GameScene | null = null;
 let menuListenersBound = false;
 
-playerNameInput.hidden = true;
-
-const app = document.getElementById("app");
+function MenuRoute(): HTMLElement {
+  return MenuView({
+    onExit: () => navigateTo("/exit"),
+    onNewGame: (playerName: string) => {
+      player = new Player(playerName);
+      navigateTo("/game");
+    },
+    onCredits: () => navigateTo("/credits"),
+    onContinue: () => navigateTo("/game"),
+    onSettings: () => navigateTo("/settings"),
+  });
+}
 
 if (app) {
   const showMenu = () => {
@@ -93,6 +94,7 @@ if (app) {
       menuListenersBound = true;
     }
   };
+  window.addEventListener("keydown", escapeHandler);
 
   const startGame = () => {
     if (!player) return;
@@ -116,5 +118,37 @@ if (app) {
     window.addEventListener("keydown", escapeHandler);
   };
 
-  showMenu();
+function SettingsView(): HTMLElement {
+  const container = document.createElement("div");
+  container.className = "settings-view";
+  container.innerHTML = `
+    <h1>Settings</h1>
+    <p>Game settings will appear here.</p>
+    <button id="back-btn" class="menu-item">Back to Menu</button>
+  `;
+
+  const backBtn = container.querySelector("#back-btn");
+  backBtn?.addEventListener("click", () => {
+    navigateTo("/");
+  });
+
+  return container;
+}
+
+function ExitView(): HTMLElement {
+  const container = document.createElement("div");
+  container.className = "exit-view";
+  container.appendChild(ExitTitle());
+  return container;
+}
+
+registerRoute("/", MenuRoute);
+registerRoute("/game", GameView);
+registerRoute("/credits", CreditsView);
+registerRoute("/settings", SettingsView);
+registerRoute("/exit", ExitView);
+
+const app = document.getElementById("app");
+if (app) {
+  startRouter(app);
 }

@@ -122,6 +122,13 @@ body {
     backdrop-filter: blur(4px);
 }
 
+.not-found {
+    text-align: center;
+    padding: 20px;
+    font-size: 1.5rem;
+    color: black;
+}
+
 .player-name-input::placeholder {
     color: rgba(242, 234, 223, 0.55);
 }
