@@ -1,6 +1,4 @@
 import { Player } from "@/class/player";
-import { GameScene } from "@/systems/GameScene";
-import { registerRoute, startRouter, navigateTo } from "@/router";
 import { MenuView, ExitTitle } from "@/menu";
 
 let player: Player | null = null;
