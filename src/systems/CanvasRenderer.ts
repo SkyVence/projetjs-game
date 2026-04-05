@@ -1,26 +1,63 @@
 import type { Entity } from "@/class/entity";
 import type { Position } from "@/class/base/position";
+import type { GeneratedMap } from "@/utils/MapGen";
+import { TileType } from "@/utils/MapGen";
 
 export interface RenderConfig {
-  width: number;
-  height: number;
+  width?: number;
+  height?: number;
   backgroundColor?: string;
   tileSize?: number;
+  aspectRatio?: number;
+  fixedResolution?: boolean;
 }
+
+// RPG Theme colors from index.css
+const TILE_COLORS: Record<TileType, string> = {
+  [TileType.Wall]: "#1a1a2e",      // Dark blue-grey (like combat backdrop)
+  [TileType.Floor]: "#7da060",     // Ground green
+  [TileType.Corridor]: "#9e8b6b",  // Lighter brown/tan
+  [TileType.Entry]: "#ffc94a",     // Golden yellow (like VS badge)
+  [TileType.Exit]: "#d92f2f",      // Enemy red
+};
+
+// RPG-style gradients for tiles
+const TILE_GRADIENTS: Record<TileType, [string, string]> = {
+  [TileType.Wall]: ["#2a2a3e", "#1a1a2e"],
+  [TileType.Floor]: ["#8fb070", "#6d9050"],
+  [TileType.Corridor]: ["#b8a070", "#8e7b5b"],
+  [TileType.Entry]: ["#fff0a8", "#ffc94a"],
+  [TileType.Exit]: ["#ff5a5a", "#d92f2f"],
+};
 
 export class CanvasRenderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private config: RenderConfig;
+  private container: HTMLElement;
+  private aspectRatio: number;
+  private onResizeCallback?: (width: number, height: number) => void;
+  private fixedResolution: boolean;
+  private internalWidth: number;
+  private internalHeight: number;
 
   constructor(container: HTMLElement, config: RenderConfig) {
+    this.container = container;
+    this.config = config;
+    this.aspectRatio = config.aspectRatio ?? 16 / 9;
+    this.fixedResolution = config.fixedResolution ?? true;
+
+    // Fixed internal resolution for fair gameplay
+    this.internalWidth = config.width ?? 1280;
+    this.internalHeight = config.height ?? 720;
+
     this.canvas = document.createElement("canvas");
-    this.canvas.width = config.width;
-    this.canvas.height = config.height;
-    this.canvas.style.border = "1px solid #fff";
     this.canvas.style.imageRendering = "pixelated";
     this.canvas.style.display = "block";
-    this.canvas.style.margin = "0 auto";
+
+    // Set fixed internal resolution
+    this.canvas.width = this.internalWidth;
+    this.canvas.height = this.internalHeight;
 
     container.appendChild(this.canvas);
 
@@ -29,7 +66,47 @@ export class CanvasRenderer {
       throw new Error("Failed to get 2D context from canvas");
     }
     this.ctx = ctx;
-    this.config = config;
+
+    // Set initial CSS size
+    this.updateCSSSize();
+
+    // Handle window resize with debounce
+    let resizeTimeout: number;
+    window.addEventListener("resize", () => {
+      window.clearTimeout(resizeTimeout);
+      resizeTimeout = window.setTimeout(() => this.updateCSSSize(), 100);
+    });
+  }
+
+  private updateCSSSize(): void {
+    const containerWidth = this.container.clientWidth;
+    const containerHeight = this.container.clientHeight;
+    const containerRatio = containerWidth / containerHeight;
+
+    let cssWidth: number;
+    let cssHeight: number;
+
+    if (containerRatio > this.aspectRatio) {
+      // Container is wider - fit to height
+      cssHeight = containerHeight;
+      cssWidth = cssHeight * this.aspectRatio;
+    } else {
+      // Container is taller - fit to width
+      cssWidth = containerWidth;
+      cssHeight = cssWidth / this.aspectRatio;
+    }
+
+    // Apply CSS size (internal resolution stays fixed)
+    this.canvas.style.width = `${cssWidth}px`;
+    this.canvas.style.height = `${cssHeight}px`;
+  }
+
+  setOnResize(callback: (width: number, height: number) => void): void {
+    this.onResizeCallback = callback;
+  }
+
+  getInternalResolution(): { width: number; height: number } {
+    return { width: this.internalWidth, height: this.internalHeight };
   }
 
   clear(): void {
@@ -50,8 +127,35 @@ export class CanvasRenderer {
     const x = pos.x + offsetX;
     const y = pos.y + offsetY;
 
-    this.ctx.fillStyle = color;
+    // RPG-style enemy: Red gradient background like rpg-sprite-enemy
+    const gradient = this.ctx.createLinearGradient(x, y, x, y + size);
+    gradient.addColorStop(0, "#d92f2f");
+    gradient.addColorStop(1, "#8a1313");
+
+    // Main body
+    this.ctx.fillStyle = gradient;
     this.ctx.fillRect(x, y, size, size);
+
+    // RPG-style border
+    this.ctx.strokeStyle = "#111";
+    this.ctx.lineWidth = 3;
+    this.ctx.strokeRect(x, y, size, size);
+
+    // Inner shadow/highlight
+    this.ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+    this.ctx.lineWidth = 2;
+    this.ctx.strokeRect(x + 2, y + 2, size - 4, size - 4);
+
+    // Enemy eyes (angry style)
+    const eyeSize = size * 0.15;
+    this.ctx.fillStyle = "#fff";
+    this.ctx.fillRect(x + size * 0.2, y + size * 0.3, eyeSize, eyeSize);
+    this.ctx.fillRect(x + size * 0.6, y + size * 0.3, eyeSize, eyeSize);
+
+    // Pupils
+    this.ctx.fillStyle = "#2a0505";
+    this.ctx.fillRect(x + size * 0.25, y + size * 0.35, eyeSize * 0.5, eyeSize * 0.5);
+    this.ctx.fillRect(x + size * 0.65, y + size * 0.35, eyeSize * 0.5, eyeSize * 0.5);
   }
 
   drawCharacter(
@@ -67,16 +171,47 @@ export class CanvasRenderer {
     const x = pos.x + offsetX;
     const y = pos.y + offsetY;
 
-    this.ctx.fillStyle = "#fff";
+    // RPG-style player: Blue gradient background like rpg-sprite-player
+    const gradient = this.ctx.createLinearGradient(x, y, x, y + size);
+    gradient.addColorStop(0, "#4f7bff");
+    gradient.addColorStop(1, "#1e3eaa");
+
+    // Main body
+    this.ctx.fillStyle = gradient;
     this.ctx.fillRect(x, y, size, size);
 
+    // RPG-style border
+    this.ctx.strokeStyle = "#111";
+    this.ctx.lineWidth = 3;
+    this.ctx.strokeRect(x, y, size, size);
+
+    // Inner shadow/highlight
+    this.ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+    this.ctx.lineWidth = 2;
+    this.ctx.strokeRect(x + 2, y + 2, size - 4, size - 4);
+
+    // Player face (simplified pixel art style)
+    const faceSize = size * 0.35;
+    const faceX = x + (size - faceSize) / 2;
+    const faceY = y + size * 0.15;
+
+    this.ctx.fillStyle = "#ffe2a6"; // Skin tone
+    this.ctx.fillRect(faceX, faceY, faceSize, faceSize);
+
+    // Eyes
+    this.ctx.fillStyle = "#111";
+    const eyeSize = faceSize * 0.2;
+    this.ctx.fillRect(faceX + faceSize * 0.2, faceY + faceSize * 0.35, eyeSize, eyeSize);
+    this.ctx.fillRect(faceX + faceSize * 0.6, faceY + faceSize * 0.35, eyeSize, eyeSize);
+
+    // Direction indicator
     if (direction.dx !== 0 || direction.dy !== 0) {
       const centerX = x + size / 2;
       const centerY = y + size / 2;
-      const arrowLength = size / 3;
+      const arrowLength = size / 2.5;
 
       this.ctx.strokeStyle = "#fff";
-      this.ctx.lineWidth = 1;
+      this.ctx.lineWidth = 3;
       this.ctx.beginPath();
       this.ctx.moveTo(centerX, centerY);
       this.ctx.lineTo(
@@ -107,9 +242,70 @@ export class CanvasRenderer {
   }
 
   drawFPS(fps: number): void {
-    this.ctx.fillStyle = "#00ff00";
-    this.ctx.font = "bold 14px Arial";
-    this.ctx.fillText(`FPS: ${Math.round(fps)}`, 10, 20);
+    // RPG-style FPS counter
+    this.ctx.fillStyle = "#111";
+    this.ctx.fillRect(5, 5, 100, 28);
+
+    this.ctx.strokeStyle = "#fff";
+    this.ctx.lineWidth = 2;
+    this.ctx.strokeRect(5, 5, 100, 28);
+
+    this.ctx.fillStyle = "#fff";
+    this.ctx.font = 'bold 14px "Trebuchet MS", sans-serif';
+    this.ctx.fillText(`FPS: ${Math.round(fps)}`, 15, 24);
+  }
+
+  renderMap(map: GeneratedMap, offsetX: number, offsetY: number, tileSize: number): void {
+    // Calculate visible tile range based on camera offset
+    const startCol = Math.max(0, Math.floor(-offsetX / tileSize));
+    const endCol = Math.min(map.width, Math.ceil((-offsetX + this.canvas.width) / tileSize));
+    const startRow = Math.max(0, Math.floor(-offsetY / tileSize));
+    const endRow = Math.min(map.height, Math.ceil((-offsetY + this.canvas.height) / tileSize));
+
+    for (let row = startRow; row < endRow; row++) {
+      const gridRow = map.grid[row];
+      if (!gridRow) continue;
+
+      for (let col = startCol; col < endCol; col++) {
+        const tile = gridRow[col];
+        if (tile === undefined) continue;
+
+        const x = col * tileSize + offsetX;
+        const y = row * tileSize + offsetY;
+
+        // Create gradient for tile
+        const gradient = this.ctx.createLinearGradient(x, y, x, y + tileSize);
+        const [topColor, bottomColor] = TILE_GRADIENTS[tile];
+        gradient.addColorStop(0, topColor);
+        gradient.addColorStop(1, bottomColor);
+
+        this.ctx.fillStyle = gradient;
+        this.ctx.fillRect(x, y, tileSize, tileSize);
+
+        // Add border for walls (RPG-style)
+        if (tile === TileType.Wall) {
+          this.ctx.strokeStyle = "#0a0a1a";
+          this.ctx.lineWidth = 2;
+          this.ctx.strokeRect(x + 1, y + 1, tileSize - 2, tileSize - 2);
+        }
+
+        // Add special styling for Entry and Exit tiles
+        if (tile === TileType.Entry || tile === TileType.Exit) {
+          // Bold border
+          this.ctx.strokeStyle = "#111";
+          this.ctx.lineWidth = 4;
+          this.ctx.strokeRect(x + 2, y + 2, tileSize - 4, tileSize - 4);
+
+          // Draw letter
+          this.ctx.fillStyle = "#111";
+          this.ctx.font = `bold ${Math.floor(tileSize * 0.5)}px "Trebuchet MS", sans-serif`;
+          this.ctx.textAlign = "center";
+          this.ctx.textBaseline = "middle";
+          const letter = tile === TileType.Entry ? "S" : "E"; // Start/Exit
+          this.ctx.fillText(letter, x + tileSize / 2, y + tileSize / 2);
+        }
+      }
+    }
   }
 
   getDimensions(): { width: number; height: number } {
