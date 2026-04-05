@@ -15,16 +15,29 @@ export interface PlayerProgression {
   xpToNext: number;
 }
 
+export type InventoryItemId = "potion" | "power_tonic" | "guard_charm";
+
+export interface PlayerInventoryItem {
+  id: InventoryItemId;
+  name: string;
+  quantity: number;
+  effect: "heal" | "buff" | "guard";
+  value: number;
+  durationTurns?: number;
+}
+
 export interface PlayerSnapshot {
   name: string;
   stats: PlayerBaseStats & PlayerProgression & { hp: number };
   status: PlayerStatus;
+  inventory: PlayerInventoryItem[];
 }
 
 export class Player extends Entity {
   public name: string;
   public stats: PlayerBaseStats & PlayerProgression & { hp: number };
   public status: PlayerStatus;
+  private inventory: PlayerInventoryItem[];
 
   constructor(name: string, baseStats: Partial<PlayerBaseStats> = {}) {
     super();
@@ -40,6 +53,31 @@ export class Player extends Entity {
       xpToNext: 100,
     };
     this.status = PlayerStatus.ALIVE;
+    this.inventory = [
+      {
+        id: "potion",
+        name: "Potion de soin",
+        quantity: 3,
+        effect: "heal",
+        value: 25,
+      },
+      {
+        id: "power_tonic",
+        name: "Tonique de force",
+        quantity: 2,
+        effect: "buff",
+        value: 8,
+        durationTurns: 2,
+      },
+      {
+        id: "guard_charm",
+        name: "Charme garde",
+        quantity: 2,
+        effect: "guard",
+        value: 1,
+        durationTurns: 1,
+      },
+    ];
   }
 
   public getPlayerName(): string {
@@ -138,11 +176,37 @@ export class Player extends Entity {
     return target.takeDamage(this.getAttackPower());
   }
 
+  public getInventory(): PlayerInventoryItem[] {
+    return this.inventory.map((item) => ({ ...item }));
+  }
+
+  public getInventoryItem(id: InventoryItemId): PlayerInventoryItem | null {
+    const item = this.inventory.find((entry) => entry.id === id);
+    return item ? { ...item } : null;
+  }
+
+  public consumeInventoryItem(id: InventoryItemId): PlayerInventoryItem | null {
+    const item = this.inventory.find((entry) => entry.id === id);
+    if (!item || item.quantity <= 0) return null;
+    item.quantity -= 1;
+    return { ...item, quantity: 1 };
+  }
+
+  public addInventoryItem(id: InventoryItemId, amount: number): void {
+    const qty = Math.max(0, Math.floor(amount));
+    if (qty === 0) return;
+
+    const item = this.inventory.find((entry) => entry.id === id);
+    if (!item) return;
+    item.quantity += qty;
+  }
+
   public toSnapshot(): PlayerSnapshot {
     return {
       name: this.name,
       stats: { ...this.stats },
       status: this.status,
+      inventory: this.getInventory(),
     };
   }
 

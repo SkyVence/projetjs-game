@@ -1,5 +1,6 @@
 import { Player } from "@/class/player";
 import { Enemy } from "@/class/enemy";
+import type { InventoryItemId, PlayerInventoryItem } from "@/class/player";
 
 type FighterSource = Player | Enemy;
 
@@ -61,5 +62,20 @@ export class Fighter {
 
   rawAttackDamage(): number {
     return this.attack;
+  }
+
+  consumeInventoryItem(id: InventoryItemId): PlayerInventoryItem | null {
+    if (!(this.source instanceof Player)) return null;
+    return this.source.consumeInventoryItem(id);
+  }
+
+  getInventoryItemCount(id: InventoryItemId): number {
+    if (!(this.source instanceof Player)) return 0;
+    return this.source.getInventoryItem(id)?.quantity ?? 0;
+  }
+
+  getInventory(): PlayerInventoryItem[] {
+    if (!(this.source instanceof Player)) return [];
+    return this.source.getInventory();
   }
 }

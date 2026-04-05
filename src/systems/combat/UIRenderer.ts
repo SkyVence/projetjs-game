@@ -16,6 +16,10 @@ export class UIRenderer {
   private timingBar: HTMLDivElement;
   private timingZone: HTMLDivElement;
   private timingCursor: HTMLDivElement;
+  private actionPanel: HTMLDivElement;
+  private inventoryPanel: HTMLDivElement;
+  private inventoryList: HTMLDivElement;
+  private inventoryCloseBtn: HTMLButtonElement;
 
   constructor(container: HTMLElement, playerName: string, enemyName: string) {
     this.root = document.createElement("div");
@@ -86,6 +90,10 @@ export class UIRenderer {
     const enemyShadow = document.createElement("div");
     enemyShadow.className = "rpg-shadow rpg-shadow-enemy";
 
+    const enemyFigure = document.createElement("div");
+    enemyFigure.className = "rpg-figure";
+    enemyFigure.append(enemySprite, enemyShadow);
+
     const enemyHud = document.createElement("div");
     enemyHud.className = "rpg-hud rpg-hud-enemy";
 
@@ -104,7 +112,7 @@ export class UIRenderer {
     enemyHpBar.appendChild(this.enemyHpFill);
     enemyHud.append(enemyNameLabel, this.enemyHpEl, enemyHpBar);
     enemyStatus.append(enemyHud);
-    enemyBox.append(enemySprite, enemyShadow, enemyStatus);
+    enemyBox.append(enemyFigure, enemyStatus);
 
     const playerBox = document.createElement("div");
     playerBox.className = "rpg-actor rpg-player-actor";
@@ -117,6 +125,10 @@ export class UIRenderer {
 
     const playerShadow = document.createElement("div");
     playerShadow.className = "rpg-shadow rpg-shadow-player";
+
+    const playerFigure = document.createElement("div");
+    playerFigure.className = "rpg-figure";
+    playerFigure.append(playerSprite, playerShadow);
 
     const playerHud = document.createElement("div");
     playerHud.className = "rpg-hud rpg-hud-player";
@@ -136,7 +148,7 @@ export class UIRenderer {
     playerHpBar.appendChild(this.playerHpFill);
     playerHud.append(playerNameEl, this.playerHpEl, playerHpBar);
     playerStatus.append(playerHud);
-    playerBox.append(playerSprite, playerShadow, playerStatus);
+    playerBox.append(playerFigure, playerStatus);
 
     const vsBadge = document.createElement("div");
     vsBadge.className = "rpg-vs-badge";
@@ -166,8 +178,34 @@ export class UIRenderer {
     const footer = document.createElement("div");
     footer.className = "rpg-footer";
 
-    const actionPanel = document.createElement("div");
-    actionPanel.className = "rpg-actions";
+    const commandBox = document.createElement("div");
+    commandBox.className = "rpg-command-box";
+
+    const dialogPane = document.createElement("div");
+    dialogPane.className = "rpg-dialog-pane";
+
+    const menuPane = document.createElement("div");
+    menuPane.className = "rpg-menu-pane";
+
+    this.actionPanel = document.createElement("div");
+    this.actionPanel.className = "rpg-actions";
+
+    this.inventoryPanel = document.createElement("div");
+    this.inventoryPanel.className = "rpg-inventory";
+    this.inventoryPanel.hidden = true;
+
+    const inventoryTitle = document.createElement("div");
+    inventoryTitle.className = "rpg-inventory-title";
+    inventoryTitle.textContent = "Inventaire";
+
+    this.inventoryList = document.createElement("div");
+    this.inventoryList.className = "rpg-inventory-list";
+
+    this.inventoryCloseBtn = document.createElement("button");
+    this.inventoryCloseBtn.className = "rpg-inventory-close";
+    this.inventoryCloseBtn.textContent = "Retour";
+
+    this.inventoryPanel.append(inventoryTitle, this.inventoryList, this.inventoryCloseBtn);
 
     this.attackButton = document.createElement("button");
     this.attackButton.className = "rpg-action";
@@ -181,8 +219,11 @@ export class UIRenderer {
     this.runButton.className = "rpg-action";
     this.runButton.textContent = "Fuir";
 
-    actionPanel.append(this.attackButton, this.itemButton, this.runButton);
-    footer.append(this.timingWrap, this.messageEl, actionPanel);
+    this.actionPanel.append(this.attackButton, this.itemButton, this.runButton);
+    dialogPane.append(this.timingWrap, this.messageEl);
+    menuPane.append(this.actionPanel, this.inventoryPanel);
+    commandBox.append(dialogPane, menuPane);
+    footer.append(commandBox);
 
     scene.append(header, battlefield, footer);
     this.root.appendChild(scene);
@@ -211,6 +252,38 @@ export class UIRenderer {
     this.attackButton.disabled = disabled;
     this.itemButton.disabled = disabled;
     this.runButton.disabled = disabled;
+  }
+
+  showInventory(
+    items: Array<{ id: string; name: string; quantity: number }>,
+    onSelect: (id: string) => void,
+    onCancel: () => void,
+  ): void {
+    this.inventoryList.innerHTML = "";
+
+    items.forEach((item) => {
+      const button = document.createElement("button");
+      button.className = "rpg-inventory-item";
+      button.textContent = `${item.name} x${item.quantity}`;
+      button.disabled = item.quantity <= 0;
+      button.addEventListener("click", () => onSelect(item.id));
+      this.inventoryList.appendChild(button);
+    });
+
+    this.inventoryCloseBtn.onclick = onCancel;
+    this.inventoryPanel.hidden = false;
+    this.actionPanel.hidden = true;
+  }
+
+  hideInventory(): void {
+    this.inventoryPanel.hidden = true;
+    this.actionPanel.hidden = false;
+  }
+
+  setActionLabels(attackLabel: string, itemLabel: string, runLabel: string): void {
+    this.attackButton.textContent = attackLabel;
+    this.itemButton.textContent = itemLabel;
+    this.runButton.textContent = runLabel;
   }
 
   showTiming(show: boolean): void {
