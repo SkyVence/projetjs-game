@@ -1,84 +1,62 @@
-import {
-  ContinueBtn,
-  NewGameBtn,
-  SettingsBtn,
-  ExitBtn,
-  GameLogo,
-  CreditsBtn,
-  ExitTitle,
-} from "@/menu";
-import { playerNameInput } from "@/input";
 import { Player } from "@/class/player";
+import { GameScene } from "@/systems/GameScene";
+import { registerRoute, startRouter, navigateTo } from "@/router";
+import { MenuView, ExitTitle } from "@/menu";
 
-let player: Player;
+let player: Player | null = null;
+let gameScene: GameScene | null = null;
 
-playerNameInput.hidden = true;
+function MenuRoute(): HTMLElement {
+  return MenuView({
+    onExit: () => navigateTo("/exit"),
+    onNewGame: (playerName: string) => {
+      player = new Player(playerName);
+      navigateTo("/game");
+    },
+    onContinue: () => navigateTo("/game"),
+  });
+}
+
+function GameView(): HTMLElement {
+  const gameContainer = document.createElement("div");
+  gameContainer.className = "game-container";
+
+  gameScene?.destroy();
+  gameScene = null;
+
+  gameScene = new GameScene(gameContainer, {
+    viewportWidth: 800,
+    viewportHeight: 600,
+    mapWidth: 2400,
+    mapHeight: 2400,
+  });
+  gameScene.initialize();
+
+  const escapeHandler = (e: KeyboardEvent) => {
+    if (e.key === "Escape") {
+      gameScene?.destroy();
+      gameScene = null;
+      navigateTo("/");
+      window.removeEventListener("keydown", escapeHandler);
+    }
+  };
+  window.addEventListener("keydown", escapeHandler);
+
+  return gameContainer;
+}
+
+function ExitView(): HTMLElement {
+  const container = document.createElement("div");
+  container.className = "exit-view";
+  container.appendChild(ExitTitle());
+  return container;
+}
+
+registerRoute("/", MenuRoute);
+registerRoute("/game", GameView);
+registerRoute("/exit", ExitView);
 
 const app = document.getElementById("app");
-
 if (app) {
-  const menuScreen = document.createElement("div");
-  menuScreen.className = "menu-screen";
-
-  const menuLeft = document.createElement("section");
-  menuLeft.className = "menu-left";
-
-  const menuRight = document.createElement("aside");
-  menuRight.className = "menu-right";
-
-  const logoFrame = document.createElement("div");
-  logoFrame.className = "logo-frame";
-
-  const menuNav = document.createElement("nav");
-  menuNav.className = "menu-nav";
-
-  const newGameWrap = document.createElement("div");
-  newGameWrap.className = "new-game-wrap";
-  newGameWrap.append(NewGameBtn, playerNameInput);
-
-  logoFrame.appendChild(GameLogo);
-  menuNav.append(ContinueBtn, newGameWrap, SettingsBtn, CreditsBtn, ExitBtn);
-
-  menuLeft.append(logoFrame, menuNav);
-  menuScreen.append(menuLeft, menuRight);
-  app.appendChild(menuScreen);
-
-  ExitBtn.addEventListener("click", () => {
-    if (confirm("Quitter VillainDungeon ?")) {
-      if (document.fullscreenElement) {
-        document.exitFullscreen();
-      }
-      app.innerHTML = "";
-      app.appendChild(ExitTitle);
-    }
-  });
-
-  NewGameBtn.addEventListener("click", () => {
-    playerNameInput.hidden = !playerNameInput.hidden;
-    if (!playerNameInput.hidden) {
-      playerNameInput.focus();
-    }
-  });
-
-  playerNameInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      const playerNameValue = playerNameInput.value.trim();
-      if (playerNameValue) {
-        player = new Player(playerNameValue);
-        app.textContent = `Hello, ${player.getPlayerName()}!`;
-      }
-    }
-  });
-
-  CreditsBtn.addEventListener("click", () => {
-    app.textContent = "Credits";
-  });
-
-  ContinueBtn.addEventListener("click", () => {
-    app.textContent = "Hello !";
-  });
-
-  SettingsBtn.addEventListener("click", () => {
-    app.textContent = "Settings";
-  });
+  startRouter(app);
 }

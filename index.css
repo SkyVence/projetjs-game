@@ -42,30 +42,27 @@ body {
     gap: clamp(24px, 4vw, 48px);
     padding: clamp(18px, 2vw, 28px);
     box-sizing: border-box;
+    background:
+        linear-gradient(
+            90deg,
+            rgba(0, 0, 0, 0.62) 0%,
+            rgba(0, 0, 0, 0.28) 35%,
+            rgba(0, 0, 0, 0.12) 100%
+        ),
+        url("./src/assets/villain-dungeon-background.png") center / cover
+            no-repeat;
 }
 
 .menu-left {
     display: flex;
     flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
     gap: clamp(18px, 3vh, 34px);
-    padding: clamp(22px, 3vw, 36px);
+    padding: clamp(24px, 4vw, 48px);
     min-height: 100%;
     box-sizing: border-box;
-}
-
-.logo-frame {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: clamp(90px, 14vh, 150px);
-    max-width: 100%;
-}
-
-.game-logo {
-    width: min(100%, 300px);
-    height: auto;
-    display: block;
-    object-fit: contain;
+    max-width: 420px;
 }
 
 .menu-nav {
@@ -73,8 +70,8 @@ body {
     flex-direction: column;
     gap: clamp(14px, 2.2vh, 24px);
     align-items: flex-start;
-    padding-left: clamp(0px, 1vw, 8px);
     width: 100%;
+    max-width: 100%;
 }
 
 .menu-item {
@@ -161,30 +158,26 @@ body {
 
     .menu-screen {
         grid-template-columns: 1fr;
+        min-height: 100vh;
+    }
+
+    .menu-left {
+        min-height: auto;
+        padding: clamp(18px, 4vw, 28px);
+        max-width: 100%;
     }
 
     .menu-right {
         min-height: 220px;
     }
 
-    .menu-nav {
-        align-items: stretch;
-    }
-
-    .menu-item {
-        width: var(--menu-item-width);
+    .menu-item,
+    .player-name-input {
+        width: min(100%, var(--menu-item-width));
     }
 
     .new-game-wrap {
-        width: fit-content;
-        flex-direction: row;
-        align-items: center;
-        flex-wrap: nowrap;
-    }
-
-    .player-name-input {
-        width: var(--menu-item-width);
-        flex: 0 0 var(--menu-item-width);
-        min-width: 0;
+        width: 100%;
+        flex-wrap: wrap;
     }
 }

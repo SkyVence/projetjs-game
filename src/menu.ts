@@ -1,39 +1,116 @@
 import "../index.css";
 
-const GameLogo = document.createElement("img");
-GameLogo.src = "../src/assets/villain-dungeon-logo.png";
-GameLogo.className = "game-logo";
+export type NavigateFunction = (path: string) => void;
 
-const ContinueBtn = document.createElement("button");
-ContinueBtn.className = "menu-item";
-ContinueBtn.textContent = "Continue";
+export interface MenuViewCallbacks {
+  onExit: () => void;
+  onNewGame: (playerName: string) => void;
+  onContinue: () => void;
+}
 
-const NewGameBtn = document.createElement("button");
-NewGameBtn.className = "menu-item";
-NewGameBtn.textContent = "New Game";
+export function MenuView(callbacks: MenuViewCallbacks): HTMLElement {
+  const menuScreen = document.createElement("div");
+  menuScreen.className = "menu-screen";
 
-const SettingsBtn = document.createElement("button");
-SettingsBtn.className = "menu-item";
-SettingsBtn.textContent = "Settings";
+  const menuLeft = document.createElement("section");
+  menuLeft.className = "menu-left";
 
-const CreditsBtn = document.createElement("button");
-CreditsBtn.className = "menu-item";
-CreditsBtn.textContent = "Credits";
+  const menuRight = document.createElement("aside");
+  menuRight.className = "menu-right";
 
-const ExitBtn = document.createElement("button");
-ExitBtn.className = "menu-item";
-ExitBtn.textContent = "Exit";
+  const menuNav = document.createElement("nav");
+  menuNav.className = "menu-nav";
 
-const ExitTitle = document.createElement("h2");
-ExitTitle.className = "exit-title";
-ExitTitle.textContent = "Goodbye !";
+  const continueBtn = document.createElement("button");
+  continueBtn.className = "menu-item";
+  continueBtn.textContent = "Continue";
 
-export {
-  ContinueBtn,
-  NewGameBtn,
-  SettingsBtn,
-  ExitBtn,
-  GameLogo,
-  CreditsBtn,
-  ExitTitle,
-};
+  const newGameBtn = document.createElement("button");
+  newGameBtn.className = "menu-item";
+  newGameBtn.textContent = "New Game";
+
+  const exitBtn = document.createElement("button");
+  exitBtn.className = "menu-item";
+  exitBtn.textContent = "Exit";
+
+  const playerNameInput = document.createElement("input");
+  playerNameInput.id = "playerName";
+  playerNameInput.type = "text";
+  playerNameInput.placeholder = "Enter your name";
+  playerNameInput.className = "player-name-input";
+  playerNameInput.hidden = true;
+
+  const newGameWrap = document.createElement("div");
+  newGameWrap.className = "new-game-wrap";
+  newGameWrap.append(newGameBtn, playerNameInput);
+
+  menuNav.append(continueBtn, newGameWrap, exitBtn);
+  menuLeft.append(menuNav);
+  menuScreen.append(menuLeft, menuRight);
+
+  exitBtn.addEventListener("click", () => {
+    if (confirm("Quitter VillainDungeon ?")) {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      }
+      callbacks.onExit();
+    }
+  });
+
+  newGameBtn.addEventListener("click", () => {
+    playerNameInput.hidden = !playerNameInput.hidden;
+    if (!playerNameInput.hidden) {
+      playerNameInput.focus();
+    }
+  });
+
+  playerNameInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      const playerNameValue = playerNameInput.value.trim();
+      if (playerNameValue) {
+        callbacks.onNewGame(playerNameValue);
+      }
+    }
+  });
+
+  continueBtn.addEventListener("click", () => {
+    callbacks.onContinue();
+  });
+
+  return menuScreen;
+}
+
+export function ExitTitle(): HTMLElement {
+  const exitTitle = document.createElement("h2");
+  exitTitle.className = "exit-title";
+  exitTitle.textContent = "Goodbye !";
+  return exitTitle;
+}
+
+export function createContinueBtn(): HTMLButtonElement {
+  const btn = document.createElement("button");
+  btn.className = "menu-item";
+  btn.textContent = "Continue";
+  return btn;
+}
+
+export function createNewGameBtn(): HTMLButtonElement {
+  const btn = document.createElement("button");
+  btn.className = "menu-item";
+  btn.textContent = "New Game";
+  return btn;
+}
+
+export function createExitBtn(): HTMLButtonElement {
+  const btn = document.createElement("button");
+  btn.className = "menu-item";
+  btn.textContent = "Exit";
+  return btn;
+}
+
+export function createExitTitle(): HTMLHeadingElement {
+  const h2 = document.createElement("h2");
+  h2.className = "exit-title";
+  h2.textContent = "Goodbye !";
+  return h2;
+}
