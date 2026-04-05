@@ -12,22 +12,22 @@ export interface RenderConfig {
   fixedResolution?: boolean;
 }
 
-// RPG Theme colors from index.css
+// Dungeon Theme colors - retro pixel art style
 const TILE_COLORS: Record<TileType, string> = {
-  [TileType.Wall]: "#1a1a2e",      // Dark blue-grey (like combat backdrop)
-  [TileType.Floor]: "#7da060",     // Ground green
-  [TileType.Corridor]: "#9e8b6b",  // Lighter brown/tan
-  [TileType.Entry]: "#ffc94a",     // Golden yellow (like VS badge)
-  [TileType.Exit]: "#d92f2f",      // Enemy red
+  [TileType.Wall]: "#2d2a3e",      // Dark purple-gray (dungeon wall)
+  [TileType.Floor]: "#4a4558",     // Medium gray-purple (platform)
+  [TileType.Corridor]: "#3d3a4d",  // Darker gray (corridor)
+  [TileType.Entry]: "#5a8f5a",     // Greenish (entry point)
+  [TileType.Exit]: "#8f5a5a",      // Reddish (exit point)
 };
 
-// RPG-style gradients for tiles
+// Dungeon-style gradients for tiles
 const TILE_GRADIENTS: Record<TileType, [string, string]> = {
-  [TileType.Wall]: ["#2a2a3e", "#1a1a2e"],
-  [TileType.Floor]: ["#8fb070", "#6d9050"],
-  [TileType.Corridor]: ["#b8a070", "#8e7b5b"],
-  [TileType.Entry]: ["#fff0a8", "#ffc94a"],
-  [TileType.Exit]: ["#ff5a5a", "#d92f2f"],
+  [TileType.Wall]: ["#3d3a4e", "#2d2a3e"],
+  [TileType.Floor]: ["#5a5568", "#3d3a4d"],
+  [TileType.Corridor]: ["#4a4558", "#2d2a3e"],
+  [TileType.Entry]: ["#6a9f6a", "#4a7f4a"],
+  [TileType.Exit]: ["#9f6a6a", "#7f4a4a"],
 };
 
 export class CanvasRenderer {
@@ -222,9 +222,10 @@ export class CanvasRenderer {
     }
   }
 
-  drawGrid(gridSize: number = 32, color: string = "#333"): void {
+  drawGrid(gridSize: number = 32, color: string = "#252230"): void {
+    // Draw dungeon-style grid with darker lines for that retro pixel look
     this.ctx.strokeStyle = color;
-    this.ctx.lineWidth = 0.5;
+    this.ctx.lineWidth = 1;
 
     for (let x = 0; x < this.canvas.width; x += gridSize) {
       this.ctx.beginPath();
@@ -242,17 +243,17 @@ export class CanvasRenderer {
   }
 
   drawFPS(fps: number): void {
-    // RPG-style FPS counter
-    this.ctx.fillStyle = "#111";
-    this.ctx.fillRect(5, 5, 100, 28);
+    // Retro green FPS counter like in the reference image
+    this.ctx.fillStyle = "#1a1a1a";
+    this.ctx.fillRect(8, 8, 80, 22);
 
-    this.ctx.strokeStyle = "#fff";
-    this.ctx.lineWidth = 2;
-    this.ctx.strokeRect(5, 5, 100, 28);
+    this.ctx.strokeStyle = "#333";
+    this.ctx.lineWidth = 1;
+    this.ctx.strokeRect(8, 8, 80, 22);
 
-    this.ctx.fillStyle = "#fff";
-    this.ctx.font = 'bold 14px "Trebuchet MS", sans-serif';
-    this.ctx.fillText(`FPS: ${Math.round(fps)}`, 15, 24);
+    this.ctx.fillStyle = "#4aff4a"; // Bright green like retro games
+    this.ctx.font = 'bold 12px monospace';
+    this.ctx.fillText(`FPS: ${Math.round(fps)}`, 15, 23);
   }
 
   renderMap(map: GeneratedMap, offsetX: number, offsetY: number, tileSize: number): void {
@@ -282,23 +283,43 @@ export class CanvasRenderer {
         this.ctx.fillStyle = gradient;
         this.ctx.fillRect(x, y, tileSize, tileSize);
 
-        // Add border for walls (RPG-style)
+        // Draw dungeon grid lines on each tile
+        this.ctx.strokeStyle = "#252230";
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeRect(x, y, tileSize, tileSize);
+
+        // Add subtle inner pattern for floors (dungeon tile look)
+        if (tile === TileType.Floor || tile === TileType.Corridor) {
+          this.ctx.fillStyle = "rgba(0, 0, 0, 0.1)";
+          this.ctx.fillRect(x + tileSize * 0.3, y + tileSize * 0.3, tileSize * 0.4, tileSize * 0.4);
+        }
+
+        // Add border for walls (dungeon-style)
         if (tile === TileType.Wall) {
-          this.ctx.strokeStyle = "#0a0a1a";
+          this.ctx.strokeStyle = "#1a1720";
           this.ctx.lineWidth = 2;
           this.ctx.strokeRect(x + 1, y + 1, tileSize - 2, tileSize - 2);
+          
+          // Add highlight to top-left for 3D effect
+          this.ctx.strokeStyle = "#3d3a4e";
+          this.ctx.lineWidth = 1;
+          this.ctx.beginPath();
+          this.ctx.moveTo(x + 2, y + tileSize - 2);
+          this.ctx.lineTo(x + 2, y + 2);
+          this.ctx.lineTo(x + tileSize - 2, y + 2);
+          this.ctx.stroke();
         }
 
         // Add special styling for Entry and Exit tiles
         if (tile === TileType.Entry || tile === TileType.Exit) {
           // Bold border
           this.ctx.strokeStyle = "#111";
-          this.ctx.lineWidth = 4;
+          this.ctx.lineWidth = 3;
           this.ctx.strokeRect(x + 2, y + 2, tileSize - 4, tileSize - 4);
 
           // Draw letter
           this.ctx.fillStyle = "#111";
-          this.ctx.font = `bold ${Math.floor(tileSize * 0.5)}px "Trebuchet MS", sans-serif`;
+          this.ctx.font = `bold ${Math.floor(tileSize * 0.4)}px monospace`;
           this.ctx.textAlign = "center";
           this.ctx.textBaseline = "middle";
           const letter = tile === TileType.Entry ? "S" : "E"; // Start/Exit

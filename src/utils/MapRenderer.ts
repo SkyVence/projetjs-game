@@ -16,12 +16,12 @@ export interface TileColors {
 }
 
 const DEFAULT_COLORS: TileColors = {
-  wall:     '#0d0d1a',
-  floor:    '#2d6a4f',
-  corridor: '#6a4c93',
-  entry:    '#f4d03f',
-  exit:     '#e74c3c',
-  fog:      '#080808',
+  wall:     '#2d2a3e',
+  floor:    '#4a4558',
+  corridor: '#3d3a4d',
+  entry:    '#5a8f5a',
+  exit:     '#8f5a5a',
+  fog:      '#1a1820',
 };
 
 export class MapRenderer {
