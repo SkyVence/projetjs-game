@@ -5,9 +5,9 @@ export class UIRenderer {
   public readonly runButton: HTMLButtonElement;
 
   private titleEl: HTMLDivElement;
+  private battleLabel!: HTMLDivElement;
   private messageEl: HTMLParagraphElement;
   private turnEl: HTMLDivElement;
-  private enemyNameEl: HTMLSpanElement;
   private playerHpEl: HTMLDivElement;
   private enemyHpEl: HTMLDivElement;
   private playerHpFill: HTMLDivElement;
@@ -31,11 +31,19 @@ export class UIRenderer {
     this.titleEl.className = "rpg-combat-title";
     this.titleEl.textContent = "Combat";
 
+    this.battleLabel = document.createElement("div");
+    this.battleLabel.className = "rpg-battle-label";
+    this.battleLabel.textContent = "Tour par tour";
+
     this.turnEl = document.createElement("div");
     this.turnEl.className = "rpg-turn-banner";
     this.turnEl.textContent = "Ton tour";
 
-    header.append(this.titleEl, this.turnEl);
+    const titleWrap = document.createElement("div");
+    titleWrap.className = "rpg-title-wrap";
+    titleWrap.append(this.titleEl, this.battleLabel);
+
+    header.append(titleWrap, this.turnEl);
 
     const battlefield = document.createElement("div");
     battlefield.className = "rpg-battlefield";
@@ -46,8 +54,31 @@ export class UIRenderer {
     const ground = document.createElement("div");
     ground.className = "rpg-ground";
 
+    const decorations = document.createElement("div");
+    decorations.className = "rpg-decorations";
+
+    const bushPositions = [
+      { left: "28%", top: "54%", size: 24 },
+      { left: "44%", top: "78%", size: 30 },
+      { left: "56%", top: "60%", size: 22 },
+      { left: "68%", top: "82%", size: 28 },
+      { left: "76%", top: "56%", size: 20 },
+    ];
+
+    bushPositions.forEach((pos) => {
+      const bush = document.createElement("div");
+      bush.className = "rpg-bush";
+      bush.style.left = pos.left;
+      bush.style.top = pos.top;
+      bush.style.setProperty("--size", `${pos.size}px`);
+      decorations.appendChild(bush);
+    });
+
     const enemyBox = document.createElement("div");
     enemyBox.className = "rpg-actor rpg-enemy-actor";
+
+    const enemyStatus = document.createElement("div");
+    enemyStatus.className = "rpg-status-box rpg-status-box-enemy";
 
     const enemySprite = document.createElement("div");
     enemySprite.className = "rpg-sprite rpg-sprite-enemy";
@@ -72,10 +103,14 @@ export class UIRenderer {
     this.enemyHpFill.className = "rpg-hp-fill";
     enemyHpBar.appendChild(this.enemyHpFill);
     enemyHud.append(enemyNameLabel, this.enemyHpEl, enemyHpBar);
-    enemyBox.append(enemySprite, enemyShadow, enemyHud);
+    enemyStatus.append(enemyHud);
+    enemyBox.append(enemySprite, enemyShadow, enemyStatus);
 
     const playerBox = document.createElement("div");
     playerBox.className = "rpg-actor rpg-player-actor";
+
+    const playerStatus = document.createElement("div");
+    playerStatus.className = "rpg-status-box rpg-status-box-player";
 
     const playerSprite = document.createElement("div");
     playerSprite.className = "rpg-sprite rpg-sprite-player";
@@ -100,21 +135,14 @@ export class UIRenderer {
     this.playerHpFill.className = "rpg-hp-fill";
     playerHpBar.appendChild(this.playerHpFill);
     playerHud.append(playerNameEl, this.playerHpEl, playerHpBar);
-    playerBox.append(playerSprite, playerShadow, playerHud);
+    playerStatus.append(playerHud);
+    playerBox.append(playerSprite, playerShadow, playerStatus);
 
-    battlefield.append(sky, ground, enemyBox, playerBox);
+    const vsBadge = document.createElement("div");
+    vsBadge.className = "rpg-vs-badge";
+    vsBadge.textContent = "VS";
 
-    const statusLine = document.createElement("div");
-    statusLine.className = "rpg-status-line";
-
-    this.enemyNameEl = document.createElement("span");
-    this.enemyNameEl.className = "rpg-status-enemy";
-    this.enemyNameEl.textContent = enemyName;
-
-    this.titleEl = document.createElement("div");
-    this.titleEl.className = "rpg-status-title";
-    this.titleEl.textContent = "Combat";
-    statusLine.append(this.titleEl, this.enemyNameEl);
+    battlefield.append(sky, ground, decorations, vsBadge, enemyBox, playerBox);
 
     this.timingWrap = document.createElement("div");
     this.timingWrap.className = "rpg-timing-wrap";
@@ -156,13 +184,13 @@ export class UIRenderer {
     actionPanel.append(this.attackButton, this.itemButton, this.runButton);
     footer.append(this.timingWrap, this.messageEl, actionPanel);
 
-    scene.append(header, battlefield, statusLine, footer);
+    scene.append(header, battlefield, footer);
     this.root.appendChild(scene);
     container.appendChild(this.root);
   }
 
   setMessage(message: string): void {
-    this.messageEl.textContent = message;
+    this.messageEl.innerHTML = message;
   }
 
   setTurnLabel(label: string): void {
@@ -175,7 +203,6 @@ export class UIRenderer {
   }
 
   setEnemyStats(name: string, hp: number, maxHp: number): void {
-    this.enemyNameEl.textContent = name;
     this.enemyHpEl.textContent = `${hp}/${maxHp} PV`;
     this.enemyHpFill.style.width = `${Math.max(0, (hp / maxHp) * 100)}%`;
   }

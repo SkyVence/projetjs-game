@@ -52,7 +52,7 @@ export class CombatManager {
       });
 
       this.bindInput();
-      this.ui.setMessage(`Un ${this.enemy.name} apparaît !`);
+      this.ui.setMessage(`<strong class="enemy-name-line">${this.enemy.name}</strong>Un ${this.enemy.name} apparaît !`);
       this.ui.setTurnLabel("Ton tour");
       this.state.setPhase(CombatPhase.PlayerTurn, "Ton tour");
       this.ui.showTiming(false);
@@ -119,7 +119,7 @@ export class CombatManager {
     this.ui.setTurnLabel("Maintiens Espace");
     this.ui.setButtonsDisabled(true);
     this.ui.showTiming(true);
-    this.ui.setMessage("Maintiens Espace puis relâche dans le vert.");
+    this.ui.setMessage(`<strong class="action-name">Attaque</strong>Maintiens Espace puis relâche dans le vert.`);
     this.timingZoneStart = 0.2 + Math.random() * 0.45;
     this.timingZoneWidth = 0.12 + Math.random() * 0.12;
     this.timingCursor = 0;
@@ -178,31 +178,37 @@ export class CombatManager {
     this.state.setPhase(CombatPhase.Animating, inGreen ? "Impact" : "Raté");
     this.ui.setTurnLabel(inGreen ? "Impact" : "Raté");
     this.ui.showTiming(false);
-    this.ui.setMessage(inGreen ? "Parfait !" : "Raté !");
+    this.ui.setMessage(inGreen ? "<strong class=\"action-name\">Parfait !</strong>" : "<strong class=\"action-name\">Raté !</strong>");
     this.ui.flash("enemy");
 
     window.setTimeout(() => {
       if (dealtDamage <= 0) {
-        this.ui.setMessage("Aucun dégât.");
+        this.ui.setMessage(`<strong class=\"action-name\">Aucun dégât.</strong><br>${this.enemy.name} prépare sa riposte...`);
       } else {
         const damage = this.enemy.applyDamage(dealtDamage);
-        this.ui.setMessage(parried ? `L'ennemi pare partiellement et prend ${damage} dégâts.` : `Vous infligez ${damage} dégâts.`);
+        this.ui.setMessage(
+          parried
+            ? `<strong class=\"action-name\">Parade partielle.</strong><br>${this.enemy.name} prend ${damage} dégâts.`
+            : `<strong class=\"action-name\">Vous infligez ${damage} dégâts.</strong><br>${this.enemy.name} vacille.`,
+        );
       }
 
       this.ui.setPlayerStats(this.player.name, this.player.hp, this.player.maxHp);
       this.ui.setEnemyStats(this.enemy.name, this.enemy.hp, this.enemy.maxHp);
 
-      if (!this.enemy.isAlive()) {
-        this.finish({ outcome: "victory", xpGained: 20 });
-        return;
-      }
+      window.setTimeout(() => {
+        if (!this.enemy.isAlive()) {
+          this.finish({ outcome: "victory", xpGained: 20 });
+          return;
+        }
 
-      this.state.setPhase(CombatPhase.EnemyTurn, "Tour ennemi");
-      this.ui.setTurnLabel("Tour ennemi");
-      this.ui.setButtonsDisabled(true);
+        this.state.setPhase(CombatPhase.EnemyTurn, "Tour ennemi");
+        this.ui.setTurnLabel("Tour ennemi");
+        this.ui.setButtonsDisabled(true);
 
-      this.enemyTurnTimer = window.setTimeout(() => this.resolveEnemyTurn(), this.enemyDelay);
-    }, 450);
+        this.enemyTurnTimer = window.setTimeout(() => this.resolveEnemyTurn(), this.enemyDelay);
+      }, 1100);
+    }, 650);
   }
 
   private resolveEnemyTurn(): void {
@@ -213,7 +219,7 @@ export class CombatManager {
     const dealt = this.player.applyDamage(rawDamage);
 
     this.ui.flash("player");
-    this.ui.setMessage(`${this.enemy.name} attaque pour ${dealt} dégâts.`);
+    this.ui.setMessage(`<strong class=\"action-name\">${this.enemy.name} attaque !</strong>${dealt} dégâts encaissés.`);
     this.ui.setPlayerStats(this.player.name, this.player.hp, this.player.maxHp);
     this.ui.setEnemyStats(this.enemy.name, this.enemy.hp, this.enemy.maxHp);
 
@@ -230,7 +236,7 @@ export class CombatManager {
   private useItem = (): void => {
     if (this.state.phase !== CombatPhase.PlayerTurn) return;
     const healed = this.player.heal(25);
-    this.ui.setMessage(`Potion: +${healed} PV.`);
+    this.ui.setMessage(`<strong class=\"action-name\">Potion</strong>+${healed} PV.`);
     this.ui.setPlayerStats(this.player.name, this.player.hp, this.player.maxHp);
     this.state.setPhase(CombatPhase.EnemyTurn, "Tour ennemi");
     this.ui.setButtonsDisabled(true);
