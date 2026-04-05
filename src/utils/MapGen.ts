@@ -48,10 +48,11 @@ export class MapGenerator {
   private readonly minRoomSize: number;
   private readonly padding:     number;
 
-  private grid!:    TileType[][];
-  private rooms!:   Room[];
-  private rngState: number = 0;
+  private grid!:         TileType[][];
+  private rooms!:        Room[];
+  private rngState:      number = 0;
   private roomIdCounter: number = 0;
+  private connections!:  Set<string>;
 
   constructor(options: MapGenOptions = {}) {
     this.width       = options.width       ?? 64;
@@ -65,6 +66,7 @@ export class MapGenerator {
     const usedSeed = seed ?? Date.now();
     this.rngState = usedSeed;
     this.roomIdCounter = 0;
+    this.connections = new Set<string>();
 
     this.grid = Array.from(
       { length: this.height },
@@ -79,6 +81,9 @@ export class MapGenerator {
       h: this.height - 2,
     };
     this.bsp(rootPartition, this.maxDepth);
+
+    // Create additional loop connections for better connectivity
+    this.createAdditionalConnections(2);
 
     const [entry, exit] = this.placeEntryAndExit();
 
@@ -161,30 +166,15 @@ export class MapGenerator {
     const roomB = this.findRoomInPartition(b);
     if (!roomA || !roomB) return;
 
+    // Track this connection
+    const connKey = this.getConnectionKey(roomA.id, roomB.id);
+    this.connections.add(connKey);
+
     const ca = this.center(roomA);
     const cb = this.center(roomB);
 
-    this.carveCorridor(ca, { x: cb.x, y: ca.y });
-    this.carveCorridor({ x: cb.x, y: ca.y }, cb);
-  }
-
-  private carveCorridor(from: Point, to: Point): void {
-    const dx = Math.sign(to.x - from.x);
-    const dy = Math.sign(to.y - from.y);
-    let { x, y } = from;
-
-    while (x !== to.x || y !== to.y) {
-      const row = this.grid[y];
-      if (row && row[x] === TileType.Wall) {
-        row[x] = TileType.Corridor;
-      }
-      if (x !== to.x) x += dx;
-      else             y += dy;
-    }
-    const lastRow = this.grid[y];
-    if (lastRow && lastRow[x] === TileType.Wall) {
-      lastRow[x] = TileType.Corridor;
-    }
+    // BSP connections must always succeed - use force carve
+    this.carveCorridorForced(ca, cb);
   }
 
   private placeEntryAndExit(): [Point, Point] {
@@ -230,6 +220,155 @@ export class MapGenerator {
       x: Math.floor(rect.x + rect.w / 2),
       y: Math.floor(rect.y + rect.h / 2),
     };
+  }
+
+  /**
+   * Check if a position has any orthogonally adjacent corridors
+   */
+  private hasAdjacentCorridor(x: number, y: number): boolean {
+    // Check orthogonal neighbors only (not diagonal)
+    const neighbors = [
+      { x: x + 1, y },
+      { x: x - 1, y },
+      { x, y: y + 1 },
+      { x, y: y - 1 },
+    ];
+
+    for (const p of neighbors) {
+      if (p.x < 0 || p.x >= this.width || p.y < 0 || p.y >= this.height) {
+        continue;
+      }
+      const tile = this.grid[p.y]?.[p.x];
+      if (tile === TileType.Corridor) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Create additional loop connections between rooms
+   */
+  private createAdditionalConnections(count: number): void {
+    if (this.rooms.length < 3) return;
+
+    let attempts = 0;
+    let created = 0;
+
+    while (created < count && attempts < count * 20) {
+      attempts++;
+
+      // Pick two random rooms that aren't already connected
+      const idxA = this.rng(0, this.rooms.length - 1);
+      let idxB = this.rng(0, this.rooms.length - 1);
+
+      if (idxA === idxB) continue;
+
+      const roomA = this.rooms[idxA]!;
+      const roomB = this.rooms[idxB]!;
+
+      // Check if already connected
+      const connKey = this.getConnectionKey(roomA.id, roomB.id);
+      if (this.connections.has(connKey)) continue;
+
+      // Create the connection
+      const ca = this.center(roomA);
+      const cb = this.center(roomB);
+
+      // Try to carve corridor (L-shaped path)
+      if (this.tryCarveCorridor(ca, cb)) {
+        this.connections.add(connKey);
+        created++;
+      }
+    }
+  }
+
+  /**
+   * Get a unique key for a room pair connection
+   */
+  private getConnectionKey(idA: number, idB: number): string {
+    return idA < idB ? `${idA}-${idB}` : `${idB}-${idA}`;
+  }
+
+  /**
+   * Carve a corridor between two points - always succeeds (for BSP connections)
+   */
+  private carveCorridorForced(from: Point, to: Point): void {
+    const dx = Math.sign(to.x - from.x);
+    const dy = Math.sign(to.y - from.y);
+    let { x, y } = from;
+
+    // Build horizontal segment
+    while (x !== to.x) {
+      x += dx;
+      const row = this.grid[y];
+      if (row && row[x] === TileType.Wall) {
+        row[x] = TileType.Corridor;
+      }
+    }
+
+    // Build vertical segment
+    while (y !== to.y) {
+      y += dy;
+      const row = this.grid[y];
+      if (row && row[x] === TileType.Wall) {
+        row[x] = TileType.Corridor;
+      }
+    }
+  }
+
+  /**
+   * Try to carve a corridor between two points, returning false if it would create adjacent corridors
+   */
+  private tryCarveCorridor(from: Point, to: Point): boolean {
+    const dx = Math.sign(to.x - from.x);
+    const dy = Math.sign(to.y - from.y);
+
+    // First, check if the path would create adjacent corridors
+    let { x, y } = from;
+    const path: Point[] = [];
+
+    // Build horizontal segment
+    while (x !== to.x) {
+      x += dx;
+      path.push({ x, y });
+    }
+
+    // Build vertical segment
+    while (y !== to.y) {
+      y += dy;
+      path.push({ x, y });
+    }
+
+    // Check each point in the path
+    for (const p of path) {
+      if (p.x < 0 || p.x >= this.width || p.y < 0 || p.y >= this.height) {
+        return false;
+      }
+
+      const tile = this.grid[p.y]![p.x];
+
+      // Skip floor tiles (we're connecting to rooms)
+      if (tile === TileType.Floor) continue;
+
+      // Allow existing corridors
+      if (tile === TileType.Corridor) continue;
+
+      // Check for adjacent corridors (but not at the endpoints which connect to rooms)
+      if (tile === TileType.Wall && this.hasAdjacentCorridor(p.x, p.y)) {
+        return false;
+      }
+    }
+
+    // Carve the corridor
+    for (const p of path) {
+      const row = this.grid[p.y];
+      if (row && row[p.x] === TileType.Wall) {
+        row[p.x] = TileType.Corridor;
+      }
+    }
+
+    return true;
   }
 
   private rng(lo: number, hi: number): number {

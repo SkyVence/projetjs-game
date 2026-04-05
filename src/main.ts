@@ -1,115 +1,80 @@
 import { Player } from "@/class/player";
 import { GameScene } from "@/systems/GameScene";
-import { registerRoute, startRouter, navigateTo } from "@/router";
 import { MenuView, ExitTitle } from "@/menu";
 import { MapGenerator } from "@/utils/MapGen";
 import { MapRenderer } from "@/utils/MapRenderer";
+import { startRouter } from "./router";
 
 let player: Player | null = null;
 let gameScene: GameScene | null = null;
 
-function MenuRoute(): HTMLElement {
-  return MenuView({
-    onExit: () => navigateTo("/exit"),
-    onNewGame: (playerName: string) => {
-      player = new Player(playerName);
-      navigateTo("/game");
-    },
-    onCredits: () => navigateTo("/credits"),
-    onContinue: () => navigateTo("/game"),
-    onSettings: () => navigateTo("/settings"),
-  });
-}
-
-function GameView(): HTMLElement {
-  const gameContainer = document.createElement("div");
-  gameContainer.className = "game-container";
-
+function showMenu(app: HTMLElement): void {
+  app.innerHTML = "";
   gameScene?.destroy();
   gameScene = null;
 
-  gameScene = new GameScene(gameContainer, {
+  const menu = MenuView({
+    onExit: () => {
+      app.innerHTML = "";
+      app.appendChild(ExitTitle());
+    },
+    onNewGame: (playerName: string) => {
+      player = new Player(playerName);
+      startGame(app);
+    },
+    onCredits: () => {
+      app.textContent = "Credits";
+    },
+    onContinue: () => {
+      if (!player) return;
+      startGame(app);
+    },
+    onSettings: () => {
+      app.textContent = "Settings";
+    },
+  });
+
+  app.appendChild(menu);
+}
+
+function startGame(app: HTMLElement): void {
+  if (!player) return;
+
+  app.innerHTML = "";
+  gameScene?.destroy();
+
+  gameScene = new GameScene(app, {
     viewportWidth: 800,
     viewportHeight: 600,
     mapWidth: 2400,
     mapHeight: 2400,
   });
+  gameScene.setPlayer(player);
   gameScene.initialize();
 
   const escapeHandler = (e: KeyboardEvent) => {
-    if (e.key === "Escape") {
-      gameScene?.destroy();
-      gameScene = null;
-      navigateTo("/");
-      window.removeEventListener("keydown", escapeHandler);
-    }
+    if (e.key !== "Escape") return;
+    showMenu(app);
+    window.removeEventListener("keydown", escapeHandler);
   };
+
   window.addEventListener("keydown", escapeHandler);
-
-  return gameContainer;
 }
-
-function CreditsView(): HTMLElement {
-  const container = document.createElement("div");
-  container.className = "credits-view";
-  container.innerHTML = `
-    <h1>Credits</h1>
-    <p>Game developed with love!</p>
-    <button id="back-btn" class="menu-item">Back to Menu</button>
-  `;
-
-  const backBtn = container.querySelector("#back-btn");
-  backBtn?.addEventListener("click", () => {
-    navigateTo("/");
-  });
-
-  return container;
-}
-
-function SettingsView(): HTMLElement {
-  const container = document.createElement("div");
-  container.className = "settings-view";
-  container.innerHTML = `
-    <h1>Settings</h1>
-    <p>Game settings will appear here.</p>
-    <button id="back-btn" class="menu-item">Back to Menu</button>
-  `;
-
-  const backBtn = container.querySelector("#back-btn");
-  backBtn?.addEventListener("click", () => {
-    navigateTo("/");
-  });
-
-  return container;
-}
-
-function ExitView(): HTMLElement {
-  const container = document.createElement("div");
-  container.className = "exit-view";
-  container.appendChild(ExitTitle());
-  return container;
-}
-
-registerRoute("/", MenuRoute);
-registerRoute("/game", GameView);
-registerRoute("/credits", CreditsView);
-registerRoute("/settings", SettingsView);
-registerRoute("/exit", ExitView);
 
 const app = document.getElementById("app");
-
 if (app) {
-  startRouter(app);
+  // startRouter(app);
+  showMenu(app);
 
   // Générer et afficher la map immédiatement
-  app.textContent = "";
+  // app.textContent = "";
 
-  const canvas = document.createElement("canvas");
-  app.appendChild(canvas);
+  // const canvas = document.createElement("canvas");
+  // app.appendChild(canvas);
 
-  const generator = new MapGenerator({ width: 80, height: 50, maxDepth: 4 });
-  const map = generator.generate();
+  // const generator = new MapGenerator({ width: 80, height: 50, maxDepth: 4 });
+  // const map = generator.generate();
 
-  const renderer = new MapRenderer(canvas, { tileSize: 16 });
-  renderer.render(map);
+  // const renderer = new MapRenderer(canvas, { tileSize: 16 });
+  // renderer.render(map);
 }
