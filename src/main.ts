@@ -1,7 +1,7 @@
 import { Player } from "@/class/player";
+import { MenuView, ExitTitle } from "@/menu";
 import { GameScene } from "@/systems/GameScene";
 import { registerRoute, startRouter, navigateTo } from "@/router";
-import { MenuView, ExitTitle } from "@/menu";
 
 let player: Player | null = null;
 let gameScene: GameScene | null = null;
