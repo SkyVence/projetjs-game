@@ -30,7 +30,7 @@ export class GameLoop {
     if (!this.isRunning) return;
 
     const now = performance.now();
-    this.deltaTime = Math.min((now - this.lastTime) / 1000, 0.016);
+    this.deltaTime = Math.min((now - this.lastTime) / 1000, 0.1);
     this.lastTime = now;
 
     this.onUpdate.forEach((cb) => cb(this.deltaTime));

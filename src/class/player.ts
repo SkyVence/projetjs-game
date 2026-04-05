@@ -46,6 +46,18 @@ export class Player extends Entity {
     return this.name;
   }
 
+  public getCurrentHp(): number {
+    return this.stats.hp;
+  }
+
+  public setCurrentHp(value: number): void {
+    this.stats.hp = Math.max(0, Math.min(value, this.getMaxHp()));
+    this.syncHealthComponent();
+    if (this.stats.hp <= 0) {
+      this.status = PlayerStatus.DEAD;
+    }
+  }
+
   public getMaxHp(): number {
     return this.stats.maxHp;
   }

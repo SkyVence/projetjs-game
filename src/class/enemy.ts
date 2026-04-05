@@ -6,6 +6,8 @@ import type { EnemyTemplate } from "@/data/enemies";
 export class Enemy extends Entity {
   public readonly template: EnemyTemplate;
   public currentHp: number;
+  private patrolDirection: 1 | -1 = 1;
+  private patrolTimer = 0;
 
   constructor(template: EnemyTemplate, x: number, y: number) {
     super();
@@ -26,6 +28,10 @@ export class Enemy extends Entity {
 
   public get defense(): number {
     return this.template.defense;
+  }
+
+  public get speed(): number {
+    return this.template.speed;
   }
 
   public get xpReward(): number {
@@ -58,5 +64,19 @@ export class Enemy extends Entity {
 
   public attackTarget(target: { takeDamage: (amount: number) => number }): number {
     return target.takeDamage(this.attack);
+  }
+
+  public tickPatrol(deltaTime: number): { dx: number; dy: number } {
+    this.patrolTimer += deltaTime;
+    if (this.patrolTimer >= 1.6) {
+      this.patrolTimer = 0;
+      this.patrolDirection = this.patrolDirection === 1 ? -1 : 1;
+    }
+
+    const intensity = this.template.behavior === "aggressive" ? 1 : 0.7;
+    return {
+      dx: this.patrolDirection * this.speed * intensity,
+      dy: Math.sin(this.patrolTimer * 3.14159) * (this.speed * 0.25),
+    };
   }
 }
