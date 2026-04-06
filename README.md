@@ -1,53 +1,123 @@
-# Dungeon Crawler
+# villain-dungeon
 
-[![TypeScript version](https://img.shields.io/badge/TypeScript-5.9.3-blue)](https://www.typescriptlang.org/) [![CI status](https://img.shields.io/badge/CI-pending-lightgrey)](#ci-status)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9.3-blue?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-Build%20Tool-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Bun](https://img.shields.io/badge/Bun-Runtime%20%2B%20Package%20Manager-f472b6?logo=bun&logoColor=white)](https://bun.sh/)
+[![Demo](https://img.shields.io/badge/Live%20Demo-Play%20Now-00C2A8)](https://villain-dungeon.skyvence.dev/)
 
-A lightweight dungeon crawler project using Vite and TypeScript.
+**villain-dungeon** is a school project dungeon crawler built with TypeScript and Vite.  
+It focuses on exploration, combat, progression, and persistent save management in the browser.
 
-## Stack
-- [TypeScript 5.9.x](https://www.typescriptlang.org/)
-- [Vite 8](https://vitejs.dev/)
-- [Bun](https://bun.sh/) as package manager and runtime
+## Live demo
+
+Play the deployed version here:
+
+https://villain-dungeon.skyvence.dev/
+
+## Project overview
+
+This game places you in a dungeon full of enemies, loot, and progression systems.  
+The goal is to survive, explore deeper floors, improve your character, and manage your save slots over time.
+
+The project was made as a school assignment, with an emphasis on clean architecture, browser persistence, and game systems implemented in TypeScript.
+
+## Main features
+
+- **Turn-based / real-time dungeon gameplay**
+  - Move through dungeon rooms and navigate the map
+  - Fight enemies with attack and defense stats
+  - Manage health, progression, and survival
+
+- **Player progression**
+  - Leveling system
+  - XP gain and progression tracking
+  - Character stats such as HP, attack, defense, and speed
+
+- **Inventory system**
+  - Consumable items
+  - Healing and buff items
+  - Item usage during gameplay
+
+- **Enemies and combat**
+  - Multiple enemy types
+  - Different enemy behaviors such as aggressive, defensive, and random
+  - Enemy HP, attack, defense, speed, and rewards
+
+- **Dungeon generation**
+  - Procedural dungeon structure
+  - Deterministic generation using per-level seeds
+  - Persistent level state for consistent replay
+
+- **Save system**
+  - Multiple save slots
+  - Save, load, and delete support
+  - Timestamped saves
+  - Migration from older save formats
+
+- **Browser persistence**
+  - Uses **IndexedDB** for durable save storage
+  - Save data persists across sessions
+
+- **UI and screens**
+  - Main menu
+  - Loading screen
+  - Error screen
+  - Save slot management interface
+
+## Notable APIs and technical systems
+
+### IndexedDB
+The project uses **IndexedDB** as the main persistence layer for save data.  
+This includes:
+
+- opening and versioning the database
+- creating and maintaining object stores
+- storing multiple save slots
+- querying and sorting saves by timestamp
+
+### Save migration system
+The game includes a migration layer that can import legacy save data and convert it into the current save-slot structure.
+
+### Deterministic level state
+Each dungeon level stores its own generated seed and enemy state so the game can preserve the world state consistently between sessions.
+
+## Tech stack
+
+- **TypeScript**
+- **Vite**
+- **Bun**
+- **IndexedDB**
+- **Browser APIs**
+- **HTML / CSS / DOM rendering**
 
 ## Getting started
+
 ### Prerequisites
-- Install Bun from the official site: https://bun.sh
+Install [Bun](https://bun.sh/) first.
 
 ### Install dependencies
-Run in the project root:
-```
+```bash
 bun install
 ```
 
-### Development server
-Start Vite in watch mode:
-```
+### Run the development server
+```bash
 bun run dev
 ```
-- Open the URL printed in the terminal (typically http://localhost:5173).
 
-### Build
-Create a production build in `dist/`:
-```
+### Build for production
+```bash
 bun run build
 ```
 
-### Preview (after build)
-If you want to preview the build, install `serve` or use any static server to serve `dist/`.
+## Notes
 
-## Development environment tips
-- TypeScript config lives in `tsconfig.json`; strict mode is enabled.
-- Entry point is `index.html` with scripts under `src/`.
-- Linting is not configured yet; add your preferred linter if needed.
-- CI is not set up yet; the badge points to the `#ci-status` placeholder—update both link and label once your workflow URL exists.
+- This project was created for a school assignment.
+- The codebase is written in TypeScript and designed to run directly in the browser.
+- Save data is stored locally in the browser using IndexedDB.
 
-## Scripts (package.json)
-- `bun run dev` — start Vite dev server.
-- `bun run build` — generate production build.
+## Demo
 
-## CI status
-CI is pending; when you add a workflow (e.g., GitHub Actions), replace the badge link with the workflow’s badge URL and rename the anchor target accordingly.
+You can try the game here:
 
-## Troubleshooting
-- If you run into type issues, ensure Bun’s TypeScript version matches `5.9.x`.
-- Clear the Bun cache if installs seem stale: `bun pm cache rm`.
+https://villain-dungeon.skyvence.dev/
