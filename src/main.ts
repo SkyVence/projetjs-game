@@ -3,12 +3,22 @@ import { GameScene } from "@/systems/GameScene";
 import { MenuView, ExitTitle } from "@/menu";
 import { startRouter, navigateTo, registerRoutes } from "./router";
 import { clearSave, hasSave, loadGame } from "@/utils/save";
+import { IndexedDB } from "@/db";
+import { Logger, SystemName } from "./utils/logger";
 
 let player: Player | null = null;
 let dungeonLevel = 1;
 let gameScene: GameScene | null = null;
 let gameEscapeHandler: ((e: KeyboardEvent) => void) | null = null;
 let app: HTMLElement | null = null;
+
+const db = new IndexedDB("test", 3);
+const logger = new Logger()
+
+db.getDatabase().then((database) => {
+  logger.log(SystemName.Database, `Database is correctly opened with name: ${database.name}`);
+});
+
 
 function cleanupGame(): void {
   if (gameEscapeHandler) {
