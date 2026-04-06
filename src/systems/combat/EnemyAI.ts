@@ -34,7 +34,11 @@ export class EnemyAI {
   chooseAction(enemy: Fighter, player: Fighter): EnemyAction {
     const hpRatio = enemy.hp / Math.max(1, enemy.maxHp);
     const playerHpRatio = player.hp / Math.max(1, player.maxHp);
-    const difficultyTier = Math.max(0, Math.floor((player.level ?? 1) / 2));
+    const playerAttack = player.rawAttackDamage();
+    const difficultyTier = Math.max(
+      0,
+      Math.floor((playerAttack + player.defense) / 10),
+    );
 
     const healCriticalThreshold = Math.max(
       0.08,
