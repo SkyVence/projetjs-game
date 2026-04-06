@@ -13,8 +13,10 @@ import type { EnemyTemplate } from "@/data/enemies";
 import { CombatManager } from "@/systems/combat/CombatManager";
 import { MapGenerator, TileType } from "@/utils/MapGen";
 import type { GeneratedMap, Room } from "@/utils/MapGen";
-import { gameDataService } from "@/data";
+import { gameDataService, gameState } from "@/data";
 import { navigateTo } from "@/router";
+import { SeededRNG } from "@/utils/rng";
+import { deriveNextSeed } from "@/utils/seed";
 
 export interface GameSceneConfig {
   mapWidth: number;
@@ -55,6 +57,19 @@ export class GameScene {
   private readonly PLAYER_SIZE = 40;
   private readonly MAP_TILES_W = 40;
   private readonly MAP_TILES_H = 40;
+
+  // Dirty rendering state tracking
+  private readonly CAMERA_THRESHOLD = 48; // pixels - one tile
+  private lastCameraOffset = { x: 0, y: 0 };
+  private lastEntityPositions = new Map<string, { x: number; y: number }>();
+  private lastEntityCount = 0;
+  private lastPlayerPosition = { x: 0, y: 0 };
+  private frameCounter = 0;
+
+  // Dirty flags
+  private cameraDirty = true;
+  private staticDirty = true;
+  private entitiesDirty = true;
 
   constructor(private container: HTMLElement, private config: GameSceneConfig) {
     const fixedWidth = config.viewportWidth ?? 1280;
@@ -113,16 +128,21 @@ export class GameScene {
     this.combatManager = null;
     this.hudRoot?.remove();
     this.hudRoot = null;
-    this.hudMeta = null;
     this.menuPanel = null;
     this.menuContent = null;
     this.menuToggle = null;
     this.menuOpen = false;
     this.container.innerHTML = "";
+
+    // Clean up dirty rendering state
+    this.lastEntityPositions.clear();
   }
 
   private startLevel(): void {
     if (!this.player) return;
+
+    // Get or initialize level state (ensures we have a seed)
+    const levelState = gameState.getLevelState(this.dungeonLevel);
 
     const mapGen = new MapGenerator({
       width: this.MAP_TILES_W,
@@ -130,7 +150,8 @@ export class GameScene {
       maxDepth: Math.min(6, 4 + Math.floor((this.dungeonLevel - 1) / 2)),
     });
 
-    this.map = mapGen.generate();
+    // Generate map with the stored seed for deterministic layout
+    this.map = mapGen.generate(levelState.seed);
     this.entities = [];
     this.enemies = [];
     this.movementAccumulator = 0;
@@ -166,10 +187,137 @@ export class GameScene {
     this.camera.follow(this.player);
     this.camera.update();
     this.updateExternalUI();
+
+    // Invalidate static layer for new level
+    this.invalidateStaticLayer();
+  }
+
+  /**
+   * Invalidate all rendering caches (call on level change or major state change)
+   */
+  private invalidateStaticLayer(): void {
+    this.staticDirty = true;
+    this.cameraDirty = true;
+    this.entitiesDirty = true;
+    this.renderer.invalidateStaticLayer();
+    this.camera.forceDirty();
+    // Reset tracking state
+    this.lastEntityPositions.clear();
+    this.lastEntityCount = 0;
+    this.lastCameraOffset = { x: 0, y: 0 };
+    this.lastPlayerPosition = { x: 0, y: 0 };
+  }
+
+  /**
+   * Check if any visible state has changed since last render
+   */
+  private checkDirtyState(): void {
+    const { offsetX, offsetY } = this.camera.getOffset();
+    const cameraX = -offsetX;
+    const cameraY = -offsetY;
+
+    // Check camera movement
+    const cameraMoved =
+      Math.abs(cameraX - this.lastCameraOffset.x) >= this.CAMERA_THRESHOLD ||
+      Math.abs(cameraY - this.lastCameraOffset.y) >= this.CAMERA_THRESHOLD;
+
+    if (cameraMoved || this.camera.hasChanged(this.CAMERA_THRESHOLD)) {
+      this.cameraDirty = true;
+      this.staticDirty = true;
+    }
+
+    // Check entity changes
+    let entitiesChanged = this.enemies.length !== this.lastEntityCount;
+
+    if (!entitiesChanged) {
+      // Check if any entity moved
+      for (const enemy of this.enemies) {
+        const pos = enemy.getComponent<Position>("position");
+        if (!pos) continue;
+
+        const lastPos = this.lastEntityPositions.get(enemy.id);
+        if (!lastPos || lastPos.x !== pos.x || lastPos.y !== pos.y) {
+          entitiesChanged = true;
+          break;
+        }
+      }
+    }
+
+    // Check player movement
+    if (this.player && !entitiesChanged) {
+      const playerPos = this.player.getComponent<Position>("position");
+      if (playerPos) {
+        if (
+          playerPos.x !== this.lastPlayerPosition.x ||
+          playerPos.y !== this.lastPlayerPosition.y
+        ) {
+          entitiesChanged = true;
+        }
+      }
+    }
+
+    if (entitiesChanged) {
+      this.entitiesDirty = true;
+    }
+  }
+
+  /**
+   * Update tracking state after render
+   */
+  private markRenderClean(): void {
+    const { offsetX, offsetY } = this.camera.getOffset();
+    this.lastCameraOffset = { x: -offsetX, y: -offsetY };
+    this.lastEntityCount = this.enemies.length;
+
+    // Update entity position tracking
+    this.lastEntityPositions.clear();
+    for (const enemy of this.enemies) {
+      const pos = enemy.getComponent<Position>("position");
+      if (pos) {
+        this.lastEntityPositions.set(enemy.id, { x: pos.x, y: pos.y });
+      }
+    }
+
+    // Update player position tracking
+    if (this.player) {
+      const playerPos = this.player.getComponent<Position>("position");
+      if (playerPos) {
+        this.lastPlayerPosition = { x: playerPos.x, y: playerPos.y };
+      }
+    }
+
+    // Reset dirty flags
+    this.cameraDirty = false;
+    this.staticDirty = false;
+    this.entitiesDirty = false;
+    this.camera.markClean();
+  }
+
+  /**
+   * Determine if render should be skipped this frame
+   */
+  private shouldSkipRender(): boolean {
+    // Always render on first frame or when explicitly dirty
+    if (this.frameCounter === 0) return false;
+
+    // Skip if nothing visible has changed
+    return !this.cameraDirty && !this.staticDirty && !this.entitiesDirty;
   }
 
   private advanceToNextLevel(): void {
-    this.dungeonLevel += 1;
+    const nextLevel = this.dungeonLevel + 1;
+
+    // Ensure next level has a derived seed (if not already visited)
+    if (!gameState.levelStates[nextLevel]) {
+      const currentState = gameState.getLevelState(this.dungeonLevel);
+      const nextSeed = deriveNextSeed(currentState.seed, nextLevel);
+      gameState.levelStates[nextLevel] = {
+        seed: nextSeed,
+        deadEnemies: [],
+      };
+    }
+
+    this.dungeonLevel = nextLevel;
     this.startLevel();
     this.escapeCollisionLockUntil = performance.now() + 700;
   }
@@ -377,6 +525,10 @@ export class GameScene {
   private spawnEnemies(): void {
     if (!this.map) return;
 
+    // Use seeded RNG for deterministic enemy spawning
+    const levelState = gameState.getLevelState(this.dungeonLevel);
+    const rng = new SeededRNG(levelState.seed);
+
     const occupiedTiles = new Set<string>();
     occupiedTiles.add(`${this.map.entry.x},${this.map.entry.y}`);
     occupiedTiles.add(`${this.map.exit.x},${this.map.exit.y}`);
@@ -388,14 +540,16 @@ export class GameScene {
     this.map.rooms.forEach((room, roomIndex) => {
       if (this.roomContains(room, this.map!.entry)) return;
 
-      const baseCount = 1 + (Math.random() < 0.5 ? 1 : 0);
-      const bonusCount = this.dungeonLevel >= 3 && Math.random() < 0.35 ? 1 : 0;
+      // Use seeded RNG for deterministic enemy count
+      const baseCount = 1 + (rng.chance(0.5) ? 1 : 0);
+      const bonusCount = this.dungeonLevel >= 3 && rng.chance(0.35) ? 1 : 0;
       const enemiesInRoom = Math.min(3, baseCount + bonusCount);
       let spawned = 0;
 
       for (let attempt = 0; attempt < 24 && spawned < enemiesInRoom; attempt += 1) {
-        const tx = this.randomInt(room.x + 1, room.x + room.w - 2);
-        const ty = this.randomInt(room.y + 1, room.y + room.h - 2);
+        // Use seeded RNG for deterministic position selection
+        const tx = rng.randomInt(room.x + 1, room.x + room.w - 2);
+        const ty = rng.randomInt(room.y + 1, room.y + room.h - 2);
         const key = `${tx},${ty}`;
         if (occupiedTiles.has(key)) continue;
 
@@ -414,13 +568,50 @@ export class GameScene {
 
         const template = spawnPool[(roomIndex + spawned + attempt) % spawnPool.length]!;
         const scaledTemplate = this.scaleEnemyTemplate(template);
-        const enemy = new Enemy(scaledTemplate, tx * this.TILE_SIZE, ty * this.TILE_SIZE);
+
+        // Generate deterministic enemy ID from position and template
+        // This ensures the same enemy gets the same ID on every load
+        const enemyId = this.generateDeterministicEnemyId(tx, ty, template.name);
+
+        // Skip spawning if this enemy is already dead
+        if (gameState.isEnemyDead(this.dungeonLevel, enemyId)) {
+          occupiedTiles.add(key);
+          spawned += 1; // Count as spawned (but don't actually spawn)
+          continue;
+        }
+
+        const enemy = new Enemy(scaledTemplate, tx * this.TILE_SIZE, ty * this.TILE_SIZE, enemyId);
         this.enemies.push(enemy);
         this.entities.push(enemy);
         occupiedTiles.add(key);
         spawned += 1;
       }
     });
+  }
+
+  /**
+   * Generate a deterministic UUID for an enemy based on its spawn conditions.
+   * This ensures the same enemy gets the same ID on every load with the same seed.
+   */
+  private generateDeterministicEnemyId(x: number, y: number, templateName: string): string {
+    const levelState = gameState.getLevelState(this.dungeonLevel);
+    // Create a hash string from the seed, level, position, and template
+    const hashInput = `${levelState.seed}-${this.dungeonLevel}-${x}-${y}-${templateName}`;
+
+    // Simple hash function to convert string to number
+    let hash = 0;
+    for (let i = 0; i < hashInput.length; i++) {
+      const char = hashInput.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & 0xffffffff;
+    }
+
+    // Convert hash to UUID format
+    const hex = Math.abs(hash).toString(16).padStart(8, '0');
+    const paddedHex = hex.padEnd(12, '0');
+
+    // Return deterministic UUID
+    return `${hex.substring(0, 8)}-${hex.substring(0, 4)}-4${hex.substring(0, 3)}-8${hex.substring(0, 3)}-${paddedHex}`;
   }
 
   private scaleEnemyTemplate(template: EnemyTemplate): EnemyTemplate {
@@ -450,12 +641,10 @@ export class GameScene {
     );
   }
 
-  private randomInt(min: number, max: number): number {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  }
-
   private update(deltaTime: number): void {
     if (!this.player || this.inCombat || this.menuOpen) return;
+
+    this.frameCounter++;
 
     this.movementAccumulator += deltaTime;
     const movementStep = Math.min(this.movementAccumulator, 0.1);
@@ -500,20 +689,40 @@ export class GameScene {
 
     this.camera.follow(this.player);
     this.camera.update();
+
+    // Check for state changes after all updates
+    this.checkDirtyState();
   }
 
   private render(deltaTime: number): void {
-    this.renderer.clear();
-    const { offsetX, offsetY } = this.camera.getOffset();
-
-    if (this.map) {
-      this.renderer.renderMap(this.map, offsetX, offsetY, this.TILE_SIZE);
+    // Skip render if nothing visible has changed
+    if (this.shouldSkipRender()) {
+      return;
     }
 
-    this.enemies.forEach((enemy) => {
+    const { offsetX, offsetY } = this.camera.getOffset();
+    const cameraX = -offsetX;
+    const cameraY = -offsetY;
+
+    // Render static map layer if needed (camera moved or level changed)
+    if (this.staticDirty && this.map) {
+      this.renderer.renderStaticLayer(this.map, cameraX, cameraY, this.TILE_SIZE);
+      this.staticDirty = false;
+    }
+
+    // Composite static layer to main canvas
+    this.renderer.compositeLayers(cameraX, cameraY);
+
+    // Render dynamic entities with culling
+    const visibleEnemies = this.enemies.filter((enemy) =>
+      this.renderer.isEntityVisible(enemy, offsetX, offsetY, this.TILE_SIZE),
+    );
+
+    visibleEnemies.forEach((enemy) => {
       this.renderer.drawEntity(enemy, offsetX, offsetY, enemy.color, this.TILE_SIZE);
     });
 
+    // Render player
     if (this.player) {
       this.renderer.drawCharacter(
         this.player,
@@ -524,7 +733,11 @@ export class GameScene {
       );
     }
 
+    // Draw FPS counter
     this.renderer.drawFPS(1 / Math.max(deltaTime, 0.001));
+
+    // Mark render as clean and update tracking state
+    this.markRenderClean();
   }
 
   private pixelToTile(pixel: number): number {
@@ -663,6 +876,8 @@ export class GameScene {
       if (!this.player) return;
 
       if (result.outcome === "victory") {
+        // Mark enemy as dead before removing (for persistence)
+        gameState.markEnemyDead(this.dungeonLevel, engagedEnemy.id);
         this.removeEnemy(engagedEnemy);
         const xpGain = Math.max(result.xpGained, engagedEnemy.xpReward);
         this.player.gainExperience(xpGain);
@@ -710,6 +925,9 @@ export class GameScene {
   private removeEnemy(enemy: Enemy): void {
     this.enemies = this.enemies.filter((candidate) => candidate !== enemy);
     this.entities = this.entities.filter((candidate) => candidate !== enemy);
+    // Entity removed, mark entities as dirty
+    this.entitiesDirty = true;
+    this.lastEntityPositions.delete(enemy.id);
   }
 
   private isColliding(a: Entity, b: Entity): boolean {

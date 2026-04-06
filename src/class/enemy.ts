@@ -2,6 +2,7 @@ import { Entity } from "@/class/entity";
 import { Health } from "@/class/base/health";
 import { Position } from "@/class/base/position";
 import type { EnemyTemplate } from "@/data/enemies";
+import { generateUUID } from "@/utils/uuid";
 
 export class Enemy extends Entity {
   public readonly template: EnemyTemplate;
@@ -9,8 +10,12 @@ export class Enemy extends Entity {
   private patrolDirection: 1 | -1 = 1;
   private patrolTimer = 0;
 
-  constructor(template: EnemyTemplate, x: number, y: number) {
+  constructor(template: EnemyTemplate, x: number, y: number, id?: string) {
     super();
+    // Override the parent-generated ID with our deterministic/persistent ID
+    if (id) {
+      this.id = id;
+    }
     this.template = template;
     this.currentHp = template.maxHp;
 

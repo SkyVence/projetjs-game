@@ -1,5 +1,6 @@
 import type { Player } from "@/class/player";
-import type { SaveSlot } from "@/db";
+import type { SaveSlot, LevelState } from "@/db";
+import { deriveNextSeed, generateInitialSeed } from "@/utils/seed";
 
 export interface SlotViewModel {
   id: string;
@@ -21,6 +22,9 @@ export const gameState = {
 
   // Slots cache
   slots: [] as SaveSlot[],
+
+  // Per-level state for deterministic dungeon generation and enemy persistence
+  levelStates: {} as Record<number, LevelState>,
 
   // Getters
   get canContinue(): boolean {
@@ -47,7 +51,7 @@ export const gameState = {
     let maxNum = 0;
     for (const slot of this.slots) {
       const match = slot.id.match(/slot-(\d+)/);
-      if (match) {
+      if (match && match[1]) {
         const num = parseInt(match[1], 10);
         if (num > maxNum) {
           maxNum = num;
@@ -65,5 +69,65 @@ export const gameState = {
       dungeonLevel: this.dungeonLevel,
       savedAt: Date.now(),
     };
+  },
+
+  // === Level State Management ===
+
+  /**
+   * Get or initialize level state for a given dungeon level.
+   * If the level doesn't have state yet, derives seed from previous level
+   * or generates a new one if it's level 1.
+   */
+  getLevelState(level: number): LevelState {
+    if (!this.levelStates[level]) {
+      // Derive seed from previous level if available
+      let seed: number;
+      const prevLevel = level - 1;
+
+      if (prevLevel >= 1 && this.levelStates[prevLevel]) {
+        seed = deriveNextSeed(this.levelStates[prevLevel].seed, level);
+      } else {
+        // Generate fresh seed (for level 1 or orphaned levels)
+        seed = generateInitialSeed() + level * 1000;
+      }
+
+      this.levelStates[level] = {
+        seed,
+        deadEnemies: [],
+      };
+    }
+    return this.levelStates[level];
+  },
+
+  /**
+   * Check if an enemy is marked as dead on a specific level.
+   */
+  isEnemyDead(level: number, enemyId: string): boolean {
+    return this.levelStates[level]?.deadEnemies.includes(enemyId) ?? false;
+  },
+
+  /**
+   * Mark an enemy as dead on a specific level.
+   */
+  markEnemyDead(level: number, enemyId: string): void {
+    const state = this.levelStates[level];
+    if (state && !state.deadEnemies.includes(enemyId)) {
+      state.deadEnemies.push(enemyId);
+    }
+  },
+
+  /**
+   * Reset a level's state (for debugging or "reset floor" feature).
+   * This will regenerate the seed and clear dead enemies.
+   */
+  resetLevel(level: number): void {
+    delete this.levelStates[level];
+  },
+
+  /**
+   * Clear all level states (for new game).
+   */
+  clearAllLevelStates(): void {
+    this.levelStates = {};
   },
 };

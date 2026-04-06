@@ -1,6 +1,7 @@
 import { Player } from "@/class/player";
 import { GameDatabase, type SaveSlot } from "@/db";
 import { Logger, SystemName } from "@/utils/logger";
+import { generateInitialSeed } from "@/utils/seed";
 import { gameState } from "./gameState";
 
 class GameDataService {
@@ -82,6 +83,14 @@ class GameDataService {
       gameState.player = new Player(playerName);
       gameState.dungeonLevel = 1;
 
+      // Initialize level states for new game
+      gameState.clearAllLevelStates();
+      const initialSeed = generateInitialSeed();
+      gameState.levelStates[1] = {
+        seed: initialSeed,
+        deadEnemies: [],
+      };
+
       await this.saveCurrentGame();
       await this.refreshSlots();
 
@@ -111,6 +120,24 @@ class GameDataService {
       gameState.player = Player.fromSnapshot(slot.player);
       gameState.dungeonLevel = slot.dungeonLevel;
 
+      // Restore level states (with migration for old saves)
+      gameState.levelStates = slot.levelStates ?? {};
+
+      // Migration: ensure current level has a state for old saves
+      if (!gameState.levelStates[gameState.dungeonLevel]) {
+        const prevLevel = gameState.dungeonLevel - 1;
+        let seed: number;
+        if (prevLevel >= 1 && gameState.levelStates[prevLevel]) {
+          seed = gameState.levelStates[prevLevel].seed;
+        } else {
+          seed = generateInitialSeed() + gameState.dungeonLevel * 1000;
+        }
+        gameState.levelStates[gameState.dungeonLevel] = {
+          seed,
+          deadEnemies: [],
+        };
+      }
+
       this.logger.log(SystemName.Database, `Game loaded from ${slotId}`);
       return true;
     } catch (error) {
@@ -138,6 +165,7 @@ class GameDataService {
       await this.db.saveSlot(gameState.currentSlotId, {
         player: gameState.player.toSnapshot(),
         dungeonLevel: gameState.dungeonLevel,
+        levelStates: gameState.levelStates,
       });
       await this.refreshSlots();
 
@@ -173,6 +201,7 @@ class GameDataService {
         gameState.currentSlotId = null;
         gameState.player = null;
         gameState.dungeonLevel = 1;
+        gameState.clearAllLevelStates();
       }
 
       await this.refreshSlots();

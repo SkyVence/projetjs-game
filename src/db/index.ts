@@ -3,8 +3,23 @@ import { Logger, SystemName } from "@/utils/logger";
 
 const LEGACY_SAVE_KEY = "villain_dungeon_save_v1";
 const DB_NAME = "VillainDungeon";
-const DB_VERSION = 2;
-const GAME_SAVE_VERSION = 2;
+const DB_VERSION = 3;
+const GAME_SAVE_VERSION = 3;
+
+/**
+ * State tracked per dungeon level
+ * Used for deterministic dungeon generation and world-state persistence
+ */
+export interface LevelState {
+  /** RNG seed for this level - ensures consistent dungeon layout */
+  seed: number;
+  /** UUIDs of enemies that have been killed on this level */
+  deadEnemies: string[];
+  // Future replay extensions:
+  // exploredTiles?: boolean[][];
+  // openedChests?: string[];
+  // triggeredEvents?: string[];
+}
 
 export interface SaveSlot {
   id: string;
@@ -12,6 +27,8 @@ export interface SaveSlot {
   dungeonLevel: number;
   savedAt: number;
   version: number;
+  /** Per-level state for deterministic regeneration and enemy persistence */
+  levelStates: Record<number, LevelState>;
 }
 
 interface LegacySaveData {
@@ -77,7 +94,7 @@ export class GameDatabase {
     });
   }
 
-  private async getDatabase(): Promise<IDBDatabase> {
+  async getDatabase(): Promise<IDBDatabase> {
     if (this.db) {
       return this.db;
     }
@@ -126,7 +143,7 @@ export class GameDatabase {
     });
   }
 
-  async saveSlot(slotId: string, data: { player: PlayerSnapshot; dungeonLevel: number }): Promise<void> {
+  async saveSlot(slotId: string, data: { player: PlayerSnapshot; dungeonLevel: number; levelStates: Record<number, LevelState> }): Promise<void> {
     await this.migrateFromLegacy();
     const db = await this.getDatabase();
 
@@ -136,6 +153,7 @@ export class GameDatabase {
       dungeonLevel: Math.max(1, Math.floor(data.dungeonLevel)),
       savedAt: Date.now(),
       version: GAME_SAVE_VERSION,
+      levelStates: data.levelStates,
     };
 
     return new Promise((resolve, reject) => {
@@ -203,9 +221,21 @@ export class GameDatabase {
         const legacy = JSON.parse(legacyRaw) as LegacySaveData;
         
         if (legacy.player && typeof legacy.dungeonLevel === "number") {
+          // Generate initial seed for migrated saves
+          const initialSeed = Date.now();
+          const levelStates: Record<number, LevelState> = {};
+          // Initialize state for current level and all previous levels
+          for (let level = 1; level <= legacy.dungeonLevel; level++) {
+            levelStates[level] = {
+              seed: initialSeed + level * 1000,
+              deadEnemies: [],
+            };
+          }
+
           await this.saveSlot("slot-1", {
             player: legacy.player,
             dungeonLevel: legacy.dungeonLevel,
+            levelStates,
           });
           this.logger.log(SystemName.Database, "Migrated legacy save to slot-1");
         }

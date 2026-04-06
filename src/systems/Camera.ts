@@ -17,8 +17,49 @@ export class Camera {
   private targetY: number = 0;
   private config: CameraConfig;
 
+  // Change tracking for dirty rendering
+  private lastX: number = 0;
+  private lastY: number = 0;
+  private changeDetected: boolean = true;
+
   constructor(config: CameraConfig) {
     this.config = { smoothness: 0.1, scrollMargin: 150, ...config };
+  }
+
+  /**
+   * Check if camera has moved beyond the specified threshold since last markClean()
+   */
+  hasChanged(threshold: number = 1): boolean {
+    if (this.changeDetected) return true;
+    const dx = Math.abs(this.x - this.lastX);
+    const dy = Math.abs(this.y - this.lastY);
+    return dx >= threshold || dy >= threshold;
+  }
+
+  /**
+   * Get the delta movement since last markClean()
+   */
+  getChangeDelta(): { dx: number; dy: number } {
+    return {
+      dx: this.x - this.lastX,
+      dy: this.y - this.lastY,
+    };
+  }
+
+  /**
+   * Mark camera as clean (reset change tracking)
+   */
+  markClean(): void {
+    this.lastX = this.x;
+    this.lastY = this.y;
+    this.changeDetected = false;
+  }
+
+  /**
+   * Force camera to report as changed on next check
+   */
+  forceDirty(): void {
+    this.changeDetected = true;
   }
 
   follow(target: Entity): void {
@@ -65,8 +106,16 @@ export class Camera {
 
   update(): void {
     const smoothness = this.config.smoothness || 0.1;
+    const prevX = this.x;
+    const prevY = this.y;
+
     this.x += (this.targetX - this.x) * smoothness;
     this.y += (this.targetY - this.y) * smoothness;
+
+    // Mark as changed if position actually moved
+    if (Math.abs(this.x - prevX) > 0.001 || Math.abs(this.y - prevY) > 0.001) {
+      this.changeDetected = true;
+    }
   }
 
   getOffset(): { offsetX: number; offsetY: number } {
@@ -91,5 +140,8 @@ export class Camera {
     this.y = Math.max(0, Math.min(this.y, maxY));
     this.targetX = Math.max(0, Math.min(this.targetX, maxX));
     this.targetY = Math.max(0, Math.min(this.targetY, maxY));
+
+    // Viewport change requires full redraw
+    this.forceDirty();
   }
 }
