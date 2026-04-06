@@ -21,15 +21,8 @@ export function MenuView(callbacks: MenuViewCallbacks): HTMLElement {
   const menuRight = document.createElement("aside");
   menuRight.className = "menu-right";
 
-  const logoFrame = document.createElement("div");
-  logoFrame.className = "logo-frame";
-
   const menuNav = document.createElement("nav");
   menuNav.className = "menu-nav";
-
-  const gameLogo = document.createElement("img");
-  gameLogo.src = "../src/assets/villain-dungeon-logo.png";
-  gameLogo.className = "game-logo";
 
   const continueBtn = document.createElement("button");
   continueBtn.className = "menu-item";
@@ -63,10 +56,9 @@ export function MenuView(callbacks: MenuViewCallbacks): HTMLElement {
   newGameWrap.className = "new-game-wrap";
   newGameWrap.append(newGameBtn, playerNameInput);
 
-  logoFrame.appendChild(gameLogo);
   menuNav.append(continueBtn, newGameWrap, settingsBtn, creditsBtn, exitBtn);
 
-  menuLeft.append(logoFrame, menuNav);
+  menuLeft.append(menuNav);
   menuScreen.append(menuLeft, menuRight);
 
   exitBtn.addEventListener("click", () => {
@@ -112,13 +104,6 @@ export function ExitTitle(): HTMLElement {
   exitTitle.className = "exit-title";
   exitTitle.textContent = "Goodbye !";
   return exitTitle;
-}
-
-export function createGameLogo(): HTMLImageElement {
-  const img = document.createElement("img");
-  img.src = "../src/assets/villain-dungeon-logo.png";
-  img.className = "game-logo";
-  return img;
 }
 
 export function createContinueBtn(): HTMLButtonElement {
