@@ -194,6 +194,7 @@ export class GameScene {
     this.menuToggle = document.createElement("button");
     this.menuToggle.className = "ingame-menu-toggle";
     this.menuToggle.textContent = "Campement";
+    this.updateHudVisibility();
 
     this.menuPanel = document.createElement("div");
     this.menuPanel.className = "ingame-menu-panel";
@@ -259,12 +260,13 @@ export class GameScene {
     if (this.menuToggle) {
       this.menuToggle.hidden = this.menuOpen;
       this.menuToggle.textContent = this.menuOpen ? "Fermer" : "Campement";
+      this.updateHudVisibility();
     }
 
     if (this.menuOpen) {
       this.renderStatsPanel();
-    } else if (this.menuContent) {
-      this.menuContent.innerHTML = "";
+    } else {
+      this.menuContent?.replaceChildren();
     }
   }
 
@@ -276,6 +278,16 @@ export class GameScene {
       Math.min(100, Math.round((xp / Math.max(1, xpToNext)) * 100)),
     );
     this.hudMeta.textContent = `Etage ${this.dungeonLevel} | ${this.player.getPlayerName()} | Niv ${level} | XP ${xp}/${xpToNext} (${ratio}%)`;
+  }
+
+  private updateHudVisibility(): void {
+    if (this.hudMeta) {
+      this.hudMeta.hidden = this.inCombat;
+    }
+
+    if (this.menuToggle) {
+      this.menuToggle.hidden = this.inCombat || this.menuOpen;
+    }
   }
 
   private renderInventoryPanel(): void {
@@ -628,13 +640,14 @@ export class GameScene {
     if (this.inCombat || !this.player) return;
 
     this.inCombat = true;
+    this.updateHudVisibility();
     this.gameLoop.stop();
 
     const engagedEnemy = enemy;
     this.combatManager?.destroy();
     this.combatManager = new CombatManager(this.container, this.player, enemy);
 
-    void this.combatManager.start().then((result) => {
+    this.combatManager.start().then((result) => {
       if (!this.player) return;
 
       if (result.outcome === "victory") {
@@ -651,6 +664,7 @@ export class GameScene {
       this.combatManager = null;
       this.inCombat = false;
       this.updateHudMeta();
+      this.updateHudVisibility();
       this.gameLoop.start();
     });
   }

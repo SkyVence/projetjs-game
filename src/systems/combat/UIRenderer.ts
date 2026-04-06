@@ -209,7 +209,11 @@ export class UIRenderer {
     this.inventoryCloseBtn.className = "rpg-inventory-close";
     this.inventoryCloseBtn.textContent = "Retour";
 
-    this.inventoryPanel.append(inventoryTitle, this.inventoryList, this.inventoryCloseBtn);
+    this.inventoryPanel.append(
+      inventoryTitle,
+      this.inventoryList,
+      this.inventoryCloseBtn,
+    );
 
     this.attackButton = document.createElement("button");
     this.attackButton.className = "rpg-action";
@@ -287,7 +291,11 @@ export class UIRenderer {
     this.actionPanel.hidden = false;
   }
 
-  setActionLabels(attackLabel: string, itemLabel: string, runLabel: string): void {
+  setActionLabels(
+    attackLabel: string,
+    itemLabel: string,
+    runLabel: string,
+  ): void {
     this.attackButton.textContent = attackLabel;
     this.itemButton.textContent = itemLabel;
     this.runButton.textContent = runLabel;
@@ -304,7 +312,9 @@ export class UIRenderer {
   }
 
   flash(target: "player" | "enemy"): void {
-    const el = this.root.querySelector(target === "player" ? ".rpg-player-actor" : ".rpg-enemy-actor");
+    const el = this.root.querySelector(
+      target === "player" ? ".rpg-player-actor" : ".rpg-enemy-actor",
+    );
     if (!el) return;
     el.classList.add("rpg-flash");
     window.setTimeout(() => el.classList.remove("rpg-flash"), 180);
