@@ -13,7 +13,7 @@ import type { EnemyTemplate } from "@/data/enemies";
 import { CombatManager } from "@/systems/combat/CombatManager";
 import { MapGenerator, TileType } from "@/utils/MapGen";
 import type { GeneratedMap, Room } from "@/utils/MapGen";
-import { saveGame } from "@/utils/save";
+import { gameDataService } from "@/data";
 
 export interface GameSceneConfig {
   mapWidth: number;
@@ -289,10 +289,10 @@ export class GameScene {
     `;
   }
 
-  private handleSave(): void {
+  private async handleSave(): Promise<void> {
     if (!this.player) return;
     try {
-      saveGame(this.player, this.dungeonLevel);
+      await gameDataService.saveGame(this.player, this.dungeonLevel);
       this.renderSavePanel();
     } catch {
       if (!this.menuContent) return;

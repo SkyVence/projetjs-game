@@ -29,3 +29,98 @@
     border-color: rgba(122, 215, 255, 0.6);
     box-shadow: 0 0 18px rgba(122, 215, 255, 0.12);
 }
+
+/* Slot List Styles */
+.slot-list-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 2rem;
+    background: rgba(8, 12, 18, 0.95);
+}
+
+.slot-list-header {
+    font-size: clamp(1.5rem, 3vw, 2.5rem);
+    margin-bottom: 2rem;
+    color: var(--text-main, #f2eadf);
+    text-align: center;
+}
+
+.slot-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+    max-width: 500px;
+    margin-bottom: 2rem;
+}
+
+.slot-list-loading {
+    text-align: center;
+    color: rgba(242, 234, 223, 0.7);
+    font-size: 1.1rem;
+}
+
+.slot-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-main, #f2eadf);
+    font: inherit;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+}
+
+.slot-item:hover:not(.empty) {
+    background: rgba(122, 215, 255, 0.15);
+    border-color: rgba(122, 215, 255, 0.4);
+    transform: translateY(-2px);
+}
+
+.slot-item.empty {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-style: dashed;
+}
+
+.slot-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.slot-name {
+    font-weight: 600;
+    font-size: 1.15rem;
+    color: #7ad7ff;
+}
+
+.slot-details {
+    font-size: 0.9rem;
+    color: rgba(242, 234, 223, 0.7);
+}
+
+.slot-list-back {
+    padding: 0.875rem 2rem;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-main, #f2eadf);
+    font: inherit;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.slot-list-back:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.5);
+}
