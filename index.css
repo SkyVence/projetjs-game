@@ -68,6 +68,104 @@ textarea {
     overflow: hidden;
 }
 
+.ingame-ui {
+    position: absolute;
+    right: 14px;
+    top: 14px;
+    z-index: 45;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+}
+
+.ingame-meta {
+    min-width: min(420px, 92vw);
+    padding: 10px 14px;
+    border: 2px solid #0f1424;
+    background: linear-gradient(90deg, rgba(10, 18, 38, 0.94), rgba(20, 30, 56, 0.84));
+    color: #f2eadf;
+    font-size: 0.86rem;
+    letter-spacing: 0.04em;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.46);
+    text-align: right;
+}
+
+.ingame-menu-toggle,
+.ingame-menu-btn {
+    border: 2px solid #101625;
+    background: linear-gradient(180deg, #f1ddaf, #d0ad71);
+    color: #17130a;
+    font-family: var(--combat-font);
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+}
+
+.ingame-menu-toggle {
+    width: 158px;
+    height: 42px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+.ingame-menu-panel {
+    width: min(430px, 92vw);
+    border: 3px solid #101625;
+    background: linear-gradient(180deg, rgba(10, 18, 36, 0.97), rgba(8, 14, 28, 0.96));
+    color: #f2eadf;
+    padding: 12px;
+    box-shadow: 0 10px 34px rgba(0, 0, 0, 0.56);
+    display: grid;
+    gap: 10px;
+}
+
+.ingame-menu-header {
+    font-family: var(--combat-font);
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: #d9c89a;
+}
+
+.ingame-menu-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.ingame-menu-btn {
+    min-height: 36px;
+}
+
+.ingame-menu-close {
+    background: linear-gradient(180deg, #b5c8ff, #7f9ce5);
+}
+
+.ingame-menu-content {
+    border: 2px solid rgba(157, 176, 220, 0.24);
+    background: linear-gradient(90deg, rgba(0, 6, 18, 0.56), rgba(0, 0, 0, 0.18));
+    min-height: 150px;
+    padding: 10px;
+    font-size: 0.92rem;
+}
+
+.ingame-menu-content h3 {
+    margin: 0 0 8px;
+    color: #ffe9bb;
+    font-family: var(--combat-font);
+}
+
+.ingame-menu-content p {
+    margin: 0 0 6px;
+}
+
+.ingame-menu-content ul {
+    margin: 0;
+    padding-left: 20px;
+    display: grid;
+    gap: 4px;
+}
+
 .game-container canvas {
     width: 100%;
     height: 100%;
@@ -979,6 +1077,19 @@ textarea {
     .rpg-command-box {
         grid-template-columns: 1fr;
         height: 100%;
+    }
+
+    .ingame-ui {
+        top: 8px;
+        right: 8px;
+    }
+
+    .ingame-meta {
+        min-width: min(360px, 92vw);
+    }
+
+    .ingame-menu-panel {
+        width: min(360px, 94vw);
     }
 
     .rpg-footer {

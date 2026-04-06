@@ -24,24 +24,20 @@ const TILE_GRADIENTS: Record<TileType, [string, string]> = {
 export class CanvasRenderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
-  private aspectRatio: number;
   private internalWidth: number;
   private internalHeight: number;
 
   constructor(private container: HTMLElement, private config: RenderConfig) {
-    this.aspectRatio = config.aspectRatio ?? 16 / 9;
     this.internalWidth = config.width ?? 1280;
     this.internalHeight = config.height ?? 720;
 
     this.canvas = document.createElement("canvas");
     this.canvas.width = this.internalWidth;
     this.canvas.height = this.internalHeight;
-    this.canvas.style.border = "4px solid #111";
     this.canvas.style.imageRendering = "pixelated";
     this.canvas.style.display = "block";
     this.canvas.style.width = "100%";
     this.canvas.style.height = "100%";
-    this.canvas.style.boxShadow = "6px 6px 0 #000";
 
     container.appendChild(this.canvas);
 
@@ -63,29 +59,8 @@ export class CanvasRenderer {
   }
 
   private updateCSSSize(): void {
-    const containerWidth = this.container.clientWidth;
-    const containerHeight = this.container.clientHeight;
-    if (containerWidth <= 0 || containerHeight <= 0) {
-      this.canvas.style.width = "100%";
-      this.canvas.style.height = "100%";
-      return;
-    }
-
-    const containerRatio = containerWidth / containerHeight;
-
-    let cssWidth: number;
-    let cssHeight: number;
-
-    if (containerRatio > this.aspectRatio) {
-      cssHeight = containerHeight;
-      cssWidth = cssHeight * this.aspectRatio;
-    } else {
-      cssWidth = containerWidth;
-      cssHeight = cssWidth / this.aspectRatio;
-    }
-
-    this.canvas.style.width = `${Math.max(1, cssWidth)}px`;
-    this.canvas.style.height = `${Math.max(1, cssHeight)}px`;
+    this.canvas.style.width = "100%";
+    this.canvas.style.height = "100%";
   }
 
   clear(): void {

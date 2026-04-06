@@ -80,6 +80,22 @@ export class Player extends Entity {
     ];
   }
 
+  public static fromSnapshot(snapshot: PlayerSnapshot): Player {
+    const player = new Player(snapshot.name, {
+      maxHp: snapshot.stats.maxHp,
+      attack: snapshot.stats.attack,
+      defense: snapshot.stats.defense,
+      speed: snapshot.stats.speed,
+    });
+
+    player.stats = { ...snapshot.stats };
+    player.status = snapshot.status;
+    player.inventory = snapshot.inventory.map((item) => ({ ...item }));
+    player.clampHp();
+
+    return player;
+  }
+
   public getPlayerName(): string {
     return this.name;
   }

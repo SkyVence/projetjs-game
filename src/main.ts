@@ -2,8 +2,10 @@ import { Player } from "@/class/player";
 import { GameScene } from "@/systems/GameScene";
 import { MenuView, ExitTitle } from "@/menu";
 import { startRouter, navigateTo, registerRoutes } from "./router";
+import { clearSave, hasSave, loadGame } from "@/utils/save";
 
 let player: Player | null = null;
+let dungeonLevel = 1;
 let gameScene: GameScene | null = null;
 let gameEscapeHandler: ((e: KeyboardEvent) => void) | null = null;
 let app: HTMLElement | null = null;
@@ -12,6 +14,9 @@ function cleanupGame(): void {
   if (gameEscapeHandler) {
     window.removeEventListener("keydown", gameEscapeHandler);
     gameEscapeHandler = null;
+  }
+  if (gameScene) {
+    dungeonLevel = gameScene.getDungeonLevel();
   }
   gameScene?.destroy();
   gameScene = null;
@@ -24,9 +29,16 @@ function MenuRoute(): HTMLElement {
     },
     onNewGame: (playerName: string) => {
       player = new Player(playerName);
+      dungeonLevel = 1;
+      clearSave();
       navigateTo("/game");
     },
     onContinue: () => {
+      const save = loadGame();
+      if (save) {
+        player = save.player;
+        dungeonLevel = save.dungeonLevel;
+      }
       if (!player) return;
       navigateTo("/game");
     },
@@ -36,6 +48,7 @@ function MenuRoute(): HTMLElement {
     onSettings: () => {
       navigateTo("/settings");
     },
+    canContinue: hasSave() || !!player,
   });
 }
 
@@ -60,6 +73,7 @@ function GameRoute(): HTMLElement {
     aspectRatio: 16 / 9,
   });
   gameScene.setPlayer(player);
+  gameScene.setDungeonLevel(dungeonLevel);
   requestAnimationFrame(() => {
     if (!wrapper.isConnected || !gameScene) return;
     gameScene.initialize();

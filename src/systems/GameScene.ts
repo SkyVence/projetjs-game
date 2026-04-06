@@ -9,10 +9,11 @@ import { CanvasRenderer } from "@/systems/CanvasRenderer";
 import { Camera } from "@/systems/Camera";
 import { GameLoop } from "@/systems/GameLoop";
 import { ENEMY_TEMPLATES } from "@/data/enemies";
+import type { EnemyTemplate } from "@/data/enemies";
 import { CombatManager } from "@/systems/combat/CombatManager";
 import { MapGenerator, TileType } from "@/utils/MapGen";
 import type { GeneratedMap, Room } from "@/utils/MapGen";
-import { navigateTo } from "@/router";
+import { saveGame } from "@/utils/save";
 
 export interface GameSceneConfig {
   mapWidth: number;
@@ -37,6 +38,13 @@ export class GameScene {
   private lastMovementInput = { dx: 0, dy: 0 };
   private movementAccumulator = 0;
   private escapeCollisionLockUntil = 0;
+  private dungeonLevel = 1;
+  private hudRoot: HTMLDivElement | null = null;
+  private hudMeta: HTMLDivElement | null = null;
+  private menuPanel: HTMLDivElement | null = null;
+  private menuContent: HTMLDivElement | null = null;
+  private menuToggle: HTMLButtonElement | null = null;
+  private menuOpen = false;
 
   private map: GeneratedMap | null = null;
 
@@ -80,24 +88,8 @@ export class GameScene {
       throw new Error("Player must be provided before initializing the scene");
     }
 
-    const mapGen = new MapGenerator({
-      width: this.MAP_TILES_W,
-      height: this.MAP_TILES_H,
-      maxDepth: 4,
-    });
-    this.map = mapGen.generate();
-
-    this.entities = [];
-    this.enemies = [];
-    this.movementAccumulator = 0;
-
-    const spawn = this.map.entry;
-    this.player.addComponent(new Position(spawn.x * this.TILE_SIZE, spawn.y * this.TILE_SIZE));
-    this.player.addComponent(new Velocity(0, 0));
-    this.player.addComponent(new Health(this.player.stats.hp, this.player.getMaxHp()));
-
-    this.entities.push(this.player);
-    this.spawnEnemies();
+    this.createHud();
+    this.startLevel();
     this.gameLoop.start();
   }
 
@@ -105,11 +97,210 @@ export class GameScene {
     this.player = player;
   }
 
+  setDungeonLevel(level: number): void {
+    this.dungeonLevel = Math.max(1, Math.floor(level));
+  }
+
+  getDungeonLevel(): number {
+    return this.dungeonLevel;
+  }
+
   destroy(): void {
     this.gameLoop.stop();
     this.combatManager?.destroy();
     this.combatManager = null;
+    this.hudRoot?.remove();
+    this.hudRoot = null;
+    this.hudMeta = null;
+    this.menuPanel = null;
+    this.menuContent = null;
+    this.menuToggle = null;
+    this.menuOpen = false;
     this.container.innerHTML = "";
+  }
+
+  private startLevel(): void {
+    if (!this.player) return;
+
+    const mapGen = new MapGenerator({
+      width: this.MAP_TILES_W,
+      height: this.MAP_TILES_H,
+      maxDepth: Math.min(6, 4 + Math.floor((this.dungeonLevel - 1) / 2)),
+    });
+
+    this.map = mapGen.generate();
+    this.entities = [];
+    this.enemies = [];
+    this.movementAccumulator = 0;
+
+    const spawn = this.map.entry;
+    const playerPosition = this.player.getComponent<Position>("position");
+    if (playerPosition) {
+      playerPosition.x = spawn.x * this.TILE_SIZE;
+      playerPosition.y = spawn.y * this.TILE_SIZE;
+    } else {
+      this.player.addComponent(new Position(spawn.x * this.TILE_SIZE, spawn.y * this.TILE_SIZE));
+    }
+
+    const playerVelocity = this.player.getComponent<Velocity>("velocity");
+    if (playerVelocity) {
+      playerVelocity.x = 0;
+      playerVelocity.y = 0;
+    } else {
+      this.player.addComponent(new Velocity(0, 0));
+    }
+
+    const playerHealth = this.player.getComponent<Health>("health");
+    if (playerHealth) {
+      playerHealth.setMaxHealth(this.player.getMaxHp());
+      playerHealth.setHealth(this.player.getCurrentHp());
+    } else {
+      this.player.addComponent(new Health(this.player.stats.hp, this.player.getMaxHp()));
+    }
+
+    this.lastSafePosition = { x: spawn.x * this.TILE_SIZE, y: spawn.y * this.TILE_SIZE };
+    this.entities.push(this.player);
+    this.spawnEnemies();
+    this.camera.follow(this.player);
+    this.camera.update();
+    this.updateHudMeta();
+  }
+
+  private advanceToNextLevel(): void {
+    this.dungeonLevel += 1;
+    this.startLevel();
+    this.escapeCollisionLockUntil = performance.now() + 700;
+  }
+
+  private createHud(): void {
+    if (this.hudRoot) return;
+
+    this.hudRoot = document.createElement("div");
+    this.hudRoot.className = "ingame-ui";
+
+    this.hudMeta = document.createElement("div");
+    this.hudMeta.className = "ingame-meta";
+
+    this.menuToggle = document.createElement("button");
+    this.menuToggle.className = "ingame-menu-toggle";
+    this.menuToggle.textContent = "Campement";
+
+    this.menuPanel = document.createElement("div");
+    this.menuPanel.className = "ingame-menu-panel";
+    this.menuPanel.hidden = true;
+
+    const menuHeader = document.createElement("div");
+    menuHeader.className = "ingame-menu-header";
+    menuHeader.textContent = "Menu aventure";
+
+    const menuActions = document.createElement("div");
+    menuActions.className = "ingame-menu-actions";
+
+    const inventoryBtn = document.createElement("button");
+    inventoryBtn.className = "ingame-menu-btn";
+    inventoryBtn.textContent = "Inventaire";
+
+    const statsBtn = document.createElement("button");
+    statsBtn.className = "ingame-menu-btn";
+    statsBtn.textContent = "Statistiques";
+
+    const saveBtn = document.createElement("button");
+    saveBtn.className = "ingame-menu-btn";
+    saveBtn.textContent = "Sauvegarder";
+
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "ingame-menu-btn ingame-menu-close";
+    closeBtn.textContent = "Fermer";
+
+    this.menuContent = document.createElement("div");
+    this.menuContent.className = "ingame-menu-content";
+
+    menuActions.append(inventoryBtn, statsBtn, saveBtn, closeBtn);
+    this.menuPanel.append(menuHeader, menuActions, this.menuContent);
+    this.hudRoot.append(this.hudMeta, this.menuToggle, this.menuPanel);
+    this.container.appendChild(this.hudRoot);
+
+    this.menuToggle.addEventListener("click", () => this.toggleMenu());
+
+    inventoryBtn.addEventListener("click", () => this.renderInventoryPanel());
+    statsBtn.addEventListener("click", () => this.renderStatsPanel());
+    saveBtn.addEventListener("click", () => this.handleSave());
+    closeBtn.addEventListener("click", () => this.toggleMenu(false));
+
+    this.updateHudMeta();
+  }
+
+  private toggleMenu(force?: boolean): void {
+    if (!this.menuPanel || this.inCombat) return;
+    this.menuOpen = force ?? !this.menuOpen;
+    this.menuPanel.hidden = !this.menuOpen;
+    if (this.menuToggle) {
+      this.menuToggle.textContent = this.menuOpen ? "Fermer" : "Campement";
+    }
+    if (this.menuOpen) {
+      this.renderStatsPanel();
+    }
+  }
+
+  private updateHudMeta(): void {
+    if (!this.hudMeta || !this.player) return;
+    const { xp, xpToNext, level } = this.player.stats;
+    const ratio = Math.max(0, Math.min(100, Math.round((xp / Math.max(1, xpToNext)) * 100)));
+    this.hudMeta.textContent = `Etage ${this.dungeonLevel} | ${this.player.getPlayerName()} | Niv ${level} | XP ${xp}/${xpToNext} (${ratio}%)`;
+  }
+
+  private renderInventoryPanel(): void {
+    if (!this.menuContent || !this.player) return;
+
+    const items = this.player.getInventory();
+    const list = items
+      .map((item) => `<li>${item.name} x${item.quantity}</li>`)
+      .join("");
+
+    this.menuContent.innerHTML = `
+      <h3>Inventaire</h3>
+      <ul>${list || "<li>Vide</li>"}</ul>
+    `;
+  }
+
+  private renderStatsPanel(): void {
+    if (!this.menuContent || !this.player) return;
+
+    const { hp, maxHp, level, xp, xpToNext, attack, defense, speed } = this.player.stats;
+    this.menuContent.innerHTML = `
+      <h3>Statistiques</h3>
+      <p>Nom: ${this.player.getPlayerName()}</p>
+      <p>Etage actuel: ${this.dungeonLevel}</p>
+      <p>Niveau: ${level}</p>
+      <p>Experience: ${xp} / ${xpToNext}</p>
+      <p>PV: ${hp} / ${maxHp}</p>
+      <p>Attaque: ${attack}</p>
+      <p>Defense: ${defense}</p>
+      <p>Vitesse: ${speed}</p>
+    `;
+  }
+
+  private renderSavePanel(): void {
+    if (!this.menuContent) return;
+    this.menuContent.innerHTML = `
+      <h3>Sauvegarde</h3>
+      <p>Sauvegarde effectuee dans le navigateur.</p>
+      <p>Tu peux quitter puis faire Continue depuis le menu principal.</p>
+    `;
+  }
+
+  private handleSave(): void {
+    if (!this.player) return;
+    try {
+      saveGame(this.player, this.dungeonLevel);
+      this.renderSavePanel();
+    } catch {
+      if (!this.menuContent) return;
+      this.menuContent.innerHTML = `
+        <h3>Sauvegarde</h3>
+        <p>Erreur: impossible de sauvegarder ici.</p>
+      `;
+    }
   }
 
   private spawnEnemies(): void {
@@ -126,7 +317,9 @@ export class GameScene {
     this.map.rooms.forEach((room, roomIndex) => {
       if (this.roomContains(room, this.map!.entry)) return;
 
-      const enemiesInRoom = 1 + (Math.random() < 0.5 ? 1 : 0);
+      const baseCount = 1 + (Math.random() < 0.5 ? 1 : 0);
+      const bonusCount = this.dungeonLevel >= 3 && Math.random() < 0.35 ? 1 : 0;
+      const enemiesInRoom = Math.min(3, baseCount + bonusCount);
       let spawned = 0;
 
       for (let attempt = 0; attempt < 24 && spawned < enemiesInRoom; attempt += 1) {
@@ -149,13 +342,32 @@ export class GameScene {
         if (tooCloseToAnother) continue;
 
         const template = spawnPool[(roomIndex + spawned + attempt) % spawnPool.length]!;
-        const enemy = new Enemy(template, tx * this.TILE_SIZE, ty * this.TILE_SIZE);
+        const scaledTemplate = this.scaleEnemyTemplate(template);
+        const enemy = new Enemy(scaledTemplate, tx * this.TILE_SIZE, ty * this.TILE_SIZE);
         this.enemies.push(enemy);
         this.entities.push(enemy);
         occupiedTiles.add(key);
         spawned += 1;
       }
     });
+  }
+
+  private scaleEnemyTemplate(template: EnemyTemplate): EnemyTemplate {
+    const depthBonus = Math.max(0, this.dungeonLevel - 1);
+    if (depthBonus === 0) return template;
+
+    const hpScale = 1 + depthBonus * 0.12;
+    const atkScale = 1 + depthBonus * 0.08;
+    const defScale = 1 + depthBonus * 0.06;
+    const xpScale = 1 + depthBonus * 0.1;
+
+    return {
+      ...template,
+      maxHp: Math.max(1, Math.round(template.maxHp * hpScale)),
+      attack: Math.max(1, Math.round(template.attack * atkScale)),
+      defense: Math.max(0, Math.round(template.defense * defScale)),
+      xpReward: Math.max(1, Math.round(template.xpReward * xpScale)),
+    };
   }
 
   private roomContains(room: Room, point: { x: number; y: number }): boolean {
@@ -172,7 +384,7 @@ export class GameScene {
   }
 
   private update(deltaTime: number): void {
-    if (!this.player || this.inCombat) return;
+    if (!this.player || this.inCombat || this.menuOpen) return;
 
     this.movementAccumulator += deltaTime;
     const movementStep = Math.min(this.movementAccumulator, 0.1);
@@ -313,7 +525,7 @@ export class GameScene {
     }
 
     if (this.checkExitReached(pos.x, pos.y)) {
-      navigateTo("/");
+      this.advanceToNextLevel();
     }
   }
 
@@ -373,7 +585,8 @@ export class GameScene {
 
       if (result.outcome === "victory") {
         this.removeEnemy(engagedEnemy);
-        this.player.gainExperience(result.xpGained);
+        const xpGain = Math.max(result.xpGained, engagedEnemy.xpReward);
+        this.player.gainExperience(xpGain);
       } else if (result.outcome === "defeat") {
         this.player.revive(1);
       } else if (result.outcome === "escaped") {
@@ -383,6 +596,7 @@ export class GameScene {
       this.combatManager?.destroy();
       this.combatManager = null;
       this.inCombat = false;
+      this.updateHudMeta();
       this.gameLoop.start();
     });
   }

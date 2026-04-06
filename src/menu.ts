@@ -8,6 +8,7 @@ export interface MenuViewCallbacks {
   onCredits: () => void;
   onContinue: () => void;
   onSettings: () => void;
+  canContinue?: boolean;
 }
 
 export function MenuView(callbacks: MenuViewCallbacks): HTMLElement {
@@ -33,6 +34,7 @@ export function MenuView(callbacks: MenuViewCallbacks): HTMLElement {
   const continueBtn = document.createElement("button");
   continueBtn.className = "menu-item";
   continueBtn.textContent = "Continue";
+  continueBtn.disabled = !callbacks.canContinue;
 
   const newGameBtn = document.createElement("button");
   newGameBtn.className = "menu-item";
