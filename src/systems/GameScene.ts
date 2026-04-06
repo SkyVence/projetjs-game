@@ -128,7 +128,7 @@ export class GameScene {
     const mapGen = new MapGenerator({
       width: this.MAP_TILES_W,
       height: this.MAP_TILES_H,
-      maxDepth: Math.min(6, 4 + Math.floor((this.dungeonLevel - 1) / 2)),
+      maxDepth: Math.min(8, 4 + Math.floor((this.dungeonLevel - 1) / 2)),
     });
 
     this.map = mapGen.generate();
@@ -169,6 +169,7 @@ export class GameScene {
       x: spawn.x * this.TILE_SIZE,
       y: spawn.y * this.TILE_SIZE,
     };
+
     this.entities.push(this.player);
     this.spawnEnemies();
     this.camera.follow(this.player);
@@ -409,10 +410,10 @@ export class GameScene {
     const depthBonus = Math.max(0, this.dungeonLevel - 1);
     if (depthBonus === 0) return template;
 
-    const hpScale = 1 + depthBonus * 0.12;
-    const atkScale = 1 + depthBonus * 0.08;
-    const defScale = 1 + depthBonus * 0.06;
-    const xpScale = 1 + depthBonus * 0.1;
+    const hpScale = 1 + depthBonus * 0.18;
+    const atkScale = 1 + depthBonus * 0.14;
+    const defScale = 1 + depthBonus * 0.1;
+    const xpScale = 1 + depthBonus * 0.16;
 
     return {
       ...template,
@@ -653,7 +654,10 @@ export class GameScene {
       if (result.outcome === "victory") {
         this.removeEnemy(engagedEnemy);
         const xpGain = Math.max(result.xpGained, engagedEnemy.xpReward);
-        this.player.gainExperience(xpGain);
+        const levelsGained = this.player.gainExperience(xpGain);
+        if (levelsGained > 0) {
+          this.updateHudMeta();
+        }
       } else if (result.outcome === "defeat") {
         this.player.revive(1);
       } else if (result.outcome === "escaped") {

@@ -43,11 +43,11 @@ export class Player extends Entity {
     super();
     this.name = name;
     this.stats = {
-      maxHp: baseStats.maxHp ?? 100,
-      hp: baseStats.maxHp ?? 100,
-      attack: baseStats.attack ?? 15,
-      defense: baseStats.defense ?? 5,
-      speed: baseStats.speed ?? 10,
+      maxHp: baseStats.maxHp ?? 86,
+      hp: baseStats.maxHp ?? 86,
+      attack: baseStats.attack ?? 11,
+      defense: baseStats.defense ?? 3,
+      speed: baseStats.speed ?? 9,
       level: 1,
       xp: 0,
       xpToNext: 100,
@@ -179,17 +179,21 @@ export class Player extends Entity {
 
   public levelUp(): void {
     this.stats.level += 1;
-    this.stats.maxHp += 20;
-    this.stats.attack += 4;
-    this.stats.defense += 2;
+    this.stats.maxHp += 14;
+    this.stats.attack += 2;
+    this.stats.defense += 1;
     this.stats.speed += 1;
-    this.stats.xpToNext = Math.floor(this.stats.xpToNext * 1.35);
+    this.stats.xpToNext = Math.floor(this.stats.xpToNext * 1.38);
     this.stats.hp = this.getMaxHp();
     this.syncHealthComponent();
   }
 
-  public attackTarget(target: { takeDamage: (amount: number) => number }): number {
-    return target.takeDamage(this.getAttackPower());
+  public attackTarget(target: {
+    takeDamage: (amount: number) => number;
+  }): number {
+    const baseAttack = this.getAttackPower();
+    const scaledAttack = Math.max(1, Math.round(baseAttack * 0.86));
+    return target.takeDamage(scaledAttack);
   }
 
   public getInventory(): PlayerInventoryItem[] {

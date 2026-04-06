@@ -72,7 +72,7 @@ export class CombatManager {
   private guardCharges = 0;
   private lootGranted = false;
   private readonly enemyParryChance = 0.2;
-  private readonly damageBoost = 1.7;
+  private readonly damageBoost = 1.6;
   private readonly enemyDelay = 1900;
 
   constructor(
@@ -251,7 +251,7 @@ export class CombatManager {
           : rawDamage;
     const defenseMitigation = Math.max(
       0,
-      Math.round(this.player.defense * 0.35),
+      Math.round(this.player.defense * 0.18),
     );
     const finalDamage =
       dealtDamage <= 0 ? 0 : Math.max(1, dealtDamage - defenseMitigation);
