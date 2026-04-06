@@ -26,12 +26,10 @@ export function MenuView(callbacks: MenuViewCallbacks): HTMLElement {
   const menuNav = document.createElement("nav");
   menuNav.className = "menu-nav";
 
-  // Game Logo
   const gameLogo = document.createElement("img");
   gameLogo.src = "../src/assets/villain-dungeon-logo.png";
   gameLogo.className = "game-logo";
 
-  // Menu Buttons
   const continueBtn = document.createElement("button");
   continueBtn.className = "menu-item";
   continueBtn.textContent = "Continue";
@@ -52,7 +50,6 @@ export function MenuView(callbacks: MenuViewCallbacks): HTMLElement {
   exitBtn.className = "menu-item";
   exitBtn.textContent = "Exit";
 
-  // Player Name Input
   const playerNameInput = document.createElement("input");
   playerNameInput.id = "playerName";
   playerNameInput.type = "text";
@@ -60,7 +57,6 @@ export function MenuView(callbacks: MenuViewCallbacks): HTMLElement {
   playerNameInput.className = "player-name-input";
   playerNameInput.hidden = true;
 
-  // Layout
   const newGameWrap = document.createElement("div");
   newGameWrap.className = "new-game-wrap";
   newGameWrap.append(newGameBtn, playerNameInput);
@@ -71,7 +67,6 @@ export function MenuView(callbacks: MenuViewCallbacks): HTMLElement {
   menuLeft.append(logoFrame, menuNav);
   menuScreen.append(menuLeft, menuRight);
 
-  // Event Listeners
   exitBtn.addEventListener("click", () => {
     if (confirm("Quitter VillainDungeon ?")) {
       if (document.fullscreenElement) {
@@ -117,7 +112,6 @@ export function ExitTitle(): HTMLElement {
   return exitTitle;
 }
 
-// Legacy exports for backward compatibility (creates fresh instances)
 export function createGameLogo(): HTMLImageElement {
   const img = document.createElement("img");
   img.src = "../src/assets/villain-dungeon-logo.png";

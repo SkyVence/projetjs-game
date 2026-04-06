@@ -34,7 +34,15 @@ body {
     justify-content: center;
 }
 
-/* Game View Styles */
+#app * {
+    caret-color: transparent;
+}
+
+input,
+textarea {
+    caret-color: auto;
+}
+
 .game-wrapper {
     width: 100%;
     height: 100%;

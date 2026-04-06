@@ -6,7 +6,7 @@ let routes: Record<string, ViewWithCleanup> = {};
 let base: HTMLElement;
 let currentCleanup: (() => void) | null = null;
 
-const allowedPattern = new RegExp("^/$|^/[A-Za-z0-9]+(/[A-Za-z0-9]+)*$"); // Check if the path is valid
+const allowedPattern = new RegExp("^/$|^/[A-Za-z0-9]+(/[A-Za-z0-9]+)*$");
 
 function NotFound(): HTMLElement {
   const div = document.createElement("div");
@@ -20,7 +20,6 @@ export function registerRoute(path: string, view: ViewWithCleanup, cleanup?: () 
     throw new Error(`Invalid path: ${path}`);
   }
   routes[path] = view;
-  // Store cleanup function with the route
   if (cleanup) {
     view._cleanup = cleanup;
   }
@@ -52,8 +51,7 @@ function renderView(path: string) {
 
   base.innerHTML = "";
   base.appendChild(view());
-  
-  // Store cleanup for this route if it has one
+
   if (view._cleanup) {
     currentCleanup = view._cleanup;
   }
@@ -64,7 +62,6 @@ export function startRouter(root: HTMLElement | null) {
   base = root;
   let currentPath = window.location.pathname;
 
-  // Handle initial render
   handleRouteChange(currentPath);
 }
 
@@ -92,7 +89,6 @@ window.addEventListener("popstate", () => {
   handleRouteChange(currentPath);
 });
 
-// Cleanup function for external use
 export function cleanup() {
   runCleanup();
   routes = {};

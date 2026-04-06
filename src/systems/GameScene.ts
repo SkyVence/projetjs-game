@@ -39,7 +39,6 @@ export class GameScene {
   private escapeCollisionLockUntil = 0;
 
   private map: GeneratedMap | null = null;
-  private spawnRoom: Room | null = null;
 
   private readonly PLAYER_SPEED = 220;
   private readonly TILE_SIZE = 48;
@@ -87,7 +86,6 @@ export class GameScene {
       maxDepth: 4,
     });
     this.map = mapGen.generate();
-    this.spawnRoom = this.map.rooms[0] ?? null;
 
     this.entities = [];
     this.enemies = [];
@@ -115,26 +113,62 @@ export class GameScene {
   }
 
   private spawnEnemies(): void {
-    if (!this.map || !this.spawnRoom) return;
+    if (!this.map) return;
 
-    const room = this.spawnRoom;
-    const enemyTileX = Math.floor(room.x + room.w / 2);
-    const enemyTileY = Math.floor(room.y + room.h / 2);
+    const occupiedTiles = new Set<string>();
+    occupiedTiles.add(`${this.map.entry.x},${this.map.entry.y}`);
+    occupiedTiles.add(`${this.map.exit.x},${this.map.exit.y}`);
 
-    let spawnX = enemyTileX;
-    const spawnY = enemyTileY;
-    const distanceToEntry = Math.hypot(spawnX - this.map.entry.x, spawnY - this.map.entry.y);
-    if (distanceToEntry < 3) {
-      spawnX += 2;
-    }
+    const spawnPool = ENEMY_TEMPLATES.filter((template) =>
+      ["slime", "bat", "skeleton"].includes(template.worldSprite),
+    );
 
-    const pixelX = spawnX * this.TILE_SIZE;
-    const pixelY = spawnY * this.TILE_SIZE;
+    this.map.rooms.forEach((room, roomIndex) => {
+      if (this.roomContains(room, this.map!.entry)) return;
 
-    const template = ENEMY_TEMPLATES[0]!;
-    const enemy = new Enemy(template, pixelX, pixelY);
-    this.enemies.push(enemy);
-    this.entities.push(enemy);
+      const enemiesInRoom = 1 + (Math.random() < 0.5 ? 1 : 0);
+      let spawned = 0;
+
+      for (let attempt = 0; attempt < 24 && spawned < enemiesInRoom; attempt += 1) {
+        const tx = this.randomInt(room.x + 1, room.x + room.w - 2);
+        const ty = this.randomInt(room.y + 1, room.y + room.h - 2);
+        const key = `${tx},${ty}`;
+        if (occupiedTiles.has(key)) continue;
+
+        const tile = this.map!.grid[ty]?.[tx];
+        if (tile === undefined || tile === TileType.Wall) continue;
+        if (Math.hypot(tx - this.map!.entry.x, ty - this.map!.entry.y) < 3) continue;
+        if (Math.hypot(tx - this.map!.exit.x, ty - this.map!.exit.y) < 2) continue;
+
+        const tooCloseToAnother = Array.from(occupiedTiles).some((coord) => {
+          const [oxStr, oyStr] = coord.split(",");
+          const ox = Number(oxStr);
+          const oy = Number(oyStr);
+          return Math.hypot(tx - ox, ty - oy) < 2;
+        });
+        if (tooCloseToAnother) continue;
+
+        const template = spawnPool[(roomIndex + spawned + attempt) % spawnPool.length]!;
+        const enemy = new Enemy(template, tx * this.TILE_SIZE, ty * this.TILE_SIZE);
+        this.enemies.push(enemy);
+        this.entities.push(enemy);
+        occupiedTiles.add(key);
+        spawned += 1;
+      }
+    });
+  }
+
+  private roomContains(room: Room, point: { x: number; y: number }): boolean {
+    return (
+      point.x >= room.x
+      && point.x < room.x + room.w
+      && point.y >= room.y
+      && point.y < room.y + room.h
+    );
+  }
+
+  private randomInt(min: number, max: number): number {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
   private update(deltaTime: number): void {
