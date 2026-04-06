@@ -23,9 +23,9 @@ body {
     background:
         linear-gradient(
             90deg,
-            rgba(0, 0, 0, 0.55) 0%,
-            rgba(0, 0, 0, 0.2) 35%,
-            rgba(0, 0, 0, 0.05) 100%
+            rgba(1, 4, 14, 0.99) 0%,
+            rgba(3, 8, 22, 0.98) 35%,
+            rgba(5, 12, 30, 0.97) 100%
         ),
         url("background.jpg") center / cover no-repeat;
 }

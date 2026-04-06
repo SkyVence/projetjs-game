@@ -64,7 +64,7 @@ export class GameScene {
     this.renderer = new CanvasRenderer(container, {
       width: fixedWidth,
       height: fixedHeight,
-      backgroundColor: "#000",
+      backgroundColor: "#0000",
       tileSize: this.TILE_SIZE,
       aspectRatio: config.aspectRatio ?? 16 / 9,
       fixedResolution: true,

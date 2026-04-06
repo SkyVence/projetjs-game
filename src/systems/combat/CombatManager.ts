@@ -35,7 +35,11 @@ export class CombatManager {
   private readonly damageBoost = 1.7;
   private readonly enemyDelay = 1900;
 
-  constructor(private container: HTMLElement, player: Player, enemy: Enemy) {
+  constructor(
+    private container: HTMLElement,
+    player: Player,
+    enemy: Enemy,
+  ) {
     this.player = new Fighter(player);
     this.enemy = new Fighter(enemy);
     this.ui = new UIRenderer(container, this.player.name, this.enemy.name);
@@ -58,7 +62,9 @@ export class CombatManager {
       });
 
       this.bindInput();
-      this.ui.setMessage(`<strong class="enemy-name-line">${this.enemy.name}</strong>Un ${this.enemy.name} apparaît !`);
+      this.ui.setMessage(
+        `<strong class="enemy-name-line">${this.enemy.name}</strong>Un ${this.enemy.name} apparaît !`,
+      );
       this.ui.setTurnLabel("Ton tour");
       this.state.setPhase(CombatPhase.PlayerTurn, "Ton tour");
       this.ui.showTiming(false);
@@ -128,7 +134,9 @@ export class CombatManager {
     this.ui.setTurnLabel("Maintiens Espace");
     this.ui.setButtonsDisabled(true);
     this.ui.showTiming(true);
-    this.ui.setMessage(`<strong class="action-name">Attaque</strong>Maintiens Espace puis relâche dans le vert.`);
+    this.ui.setMessage(
+      `<strong class="action-name">Attaque</strong>Maintiens Espace puis relâche dans le vert.`,
+    );
     this.timingZoneStart = 0.2 + Math.random() * 0.45;
     this.timingZoneWidth = 0.12 + Math.random() * 0.12;
     this.timingCursor = 0;
@@ -136,7 +144,11 @@ export class CombatManager {
     this.timingLastFrame = this.startTime;
     this.spaceHeld = false;
     this.timingActive = true;
-    this.ui.updateTiming(this.timingCursor, this.timingZoneStart, this.timingZoneWidth);
+    this.ui.updateTiming(
+      this.timingCursor,
+      this.timingZoneStart,
+      this.timingZoneWidth,
+    );
     this.startTimingLoop();
   };
 
@@ -156,7 +168,11 @@ export class CombatManager {
         this.timingCursor = Math.max(0, this.timingCursor - delta * 1.25);
       }
 
-      this.ui.updateTiming(this.timingCursor, this.timingZoneStart, this.timingZoneWidth);
+      this.ui.updateTiming(
+        this.timingCursor,
+        this.timingZoneStart,
+        this.timingZoneWidth,
+      );
 
       if (this.timingCursor >= 1 && this.spaceHeld) {
         this.resolvePlayerTiming();
@@ -179,22 +195,43 @@ export class CombatManager {
 
     this.timingActive = false;
 
-    const inGreen = this.timingCursor >= this.timingZoneStart && this.timingCursor <= this.timingZoneStart + this.timingZoneWidth;
+    const inGreen =
+      this.timingCursor >= this.timingZoneStart &&
+      this.timingCursor <= this.timingZoneStart + this.timingZoneWidth;
     const parried = Math.random() < this.enemyParryChance;
-    const rawDamage = inGreen ? Math.round((this.player.attack + this.attackBuff) * this.damageBoost) : 0;
-    const dealtDamage = rawDamage <= 0 ? 0 : parried ? Math.max(1, Math.floor(rawDamage * 0.5)) : rawDamage;
+    const rawDamage = inGreen
+      ? Math.round((this.player.attack + this.attackBuff) * this.damageBoost)
+      : 0;
+    const dealtDamage =
+      rawDamage <= 0
+        ? 0
+        : parried
+          ? Math.max(1, Math.floor(rawDamage * 0.5))
+          : rawDamage;
+    const defenseMitigation = Math.max(
+      0,
+      Math.round(this.player.defense * 0.35),
+    );
+    const finalDamage =
+      dealtDamage <= 0 ? 0 : Math.max(1, dealtDamage - defenseMitigation);
 
     this.state.setPhase(CombatPhase.Animating, inGreen ? "Impact" : "Raté");
     this.ui.setTurnLabel(inGreen ? "Impact" : "Raté");
     this.ui.showTiming(false);
-    this.ui.setMessage(inGreen ? "<strong class=\"action-name\">Parfait !</strong>" : "<strong class=\"action-name\">Raté !</strong>");
+    this.ui.setMessage(
+      inGreen
+        ? '<strong class="action-name">Parfait !</strong>'
+        : '<strong class="action-name">Raté !</strong>',
+    );
     this.ui.flash("enemy");
 
     window.setTimeout(() => {
       if (dealtDamage <= 0) {
-        this.ui.setMessage(`<strong class=\"action-name\">Aucun dégât.</strong><br>${this.enemy.name} prépare sa riposte...`);
+        this.ui.setMessage(
+          `<strong class=\"action-name\">Aucun dégât.</strong><br>${this.enemy.name} prépare sa riposte...`,
+        );
       } else {
-        const damage = this.enemy.applyDamage(dealtDamage);
+        const damage = this.enemy.applyDamage(finalDamage);
         this.ui.setMessage(
           parried
             ? `<strong class=\"action-name\">Parade partielle.</strong><br>${this.enemy.name} prend ${damage} dégâts.`
@@ -202,7 +239,12 @@ export class CombatManager {
         );
       }
 
-      this.ui.setPlayerStats(this.player.name, this.player.hp, this.player.maxHp);
+      this.ui.setPlayerStats(
+        this.player.name,
+        this.player.hp,
+        this.player.maxHp,
+      );
+      this.ui.setTurnLabel(`Ton tour | DEF ${this.player.defense}`);
       this.ui.setEnemyStats(this.enemy.name, this.enemy.hp, this.enemy.maxHp);
       this.tickBuffDuration();
 
@@ -217,7 +259,10 @@ export class CombatManager {
         this.ui.setButtonsDisabled(true);
         this.refreshActionLabels();
 
-        this.enemyTurnTimer = window.setTimeout(() => this.resolveEnemyTurn(), this.enemyDelay);
+        this.enemyTurnTimer = window.setTimeout(
+          () => this.resolveEnemyTurn(),
+          this.enemyDelay,
+        );
       }, 1100);
     }, 650);
   }
@@ -236,8 +281,12 @@ export class CombatManager {
       this.ui.setEnemyStats(this.enemy.name, this.enemy.hp, this.enemy.maxHp);
     } else {
       const variance = 0.8 + Math.random() * 0.18;
-      const rawDamage = Math.max(1, Math.round(this.enemy.attack * action.powerMultiplier * variance));
-      const dealt = this.guardCharges > 0 ? 0 : this.player.applyDamage(rawDamage);
+      const rawDamage = Math.max(
+        1,
+        Math.round(this.enemy.attack * action.powerMultiplier * variance),
+      );
+      const dealt =
+        this.guardCharges > 0 ? 0 : this.player.applyDamage(rawDamage);
       if (this.guardCharges > 0) {
         this.guardCharges -= 1;
       }
@@ -247,7 +296,12 @@ export class CombatManager {
           ? `<strong class=\"action-name\">${this.enemy.name} utilise ${action.label}</strong><br>Le charme bloque l'attaque !`
           : `<strong class=\"action-name\">${this.enemy.name} utilise ${action.label}</strong><br>${dealt} dégâts encaissés.`,
       );
-      this.ui.setPlayerStats(this.player.name, this.player.hp, this.player.maxHp);
+      this.ui.setPlayerStats(
+        this.player.name,
+        this.player.hp,
+        this.player.maxHp,
+      );
+      this.ui.setTurnLabel(`Tour ennemi | DEF ${this.player.defense}`);
     }
 
     if (!this.player.isAlive()) {
@@ -278,7 +332,11 @@ export class CombatManager {
   };
 
   private escapeCombat = (): void => {
-    if (this.state.phase === CombatPhase.Victory || this.state.phase === CombatPhase.Defeat) return;
+    if (
+      this.state.phase === CombatPhase.Victory ||
+      this.state.phase === CombatPhase.Defeat
+    )
+      return;
     this.finish({ outcome: "escaped", xpGained: 0 });
   };
 
@@ -287,7 +345,14 @@ export class CombatManager {
       this.resolveEnd(result);
       this.resolveEnd = null;
     }
-    this.state.setPhase(result.outcome === "victory" ? CombatPhase.Victory : result.outcome === "defeat" ? CombatPhase.Defeat : CombatPhase.Escaped, result.outcome.toUpperCase());
+    this.state.setPhase(
+      result.outcome === "victory"
+        ? CombatPhase.Victory
+        : result.outcome === "defeat"
+          ? CombatPhase.Defeat
+          : CombatPhase.Escaped,
+      result.outcome.toUpperCase(),
+    );
     this.destroy();
   }
 
@@ -296,14 +361,15 @@ export class CombatManager {
     this.buffTurnsLeft -= 1;
     if (this.buffTurnsLeft <= 0) {
       this.attackBuff = 0;
-      this.ui.setMessage(`<strong class=\"action-name\">Effet terminé</strong>Le bonus d'attaque disparaît.`);
+      this.ui.setMessage(
+        `<strong class=\"action-name\">Effet terminé</strong>Le bonus d'attaque disparaît.`,
+      );
     }
   }
 
   private refreshActionLabels(): void {
-    const attackLabel = this.attackBuff > 0
-      ? `Attaquer (+${this.attackBuff})`
-      : "Attaquer";
+    const attackLabel =
+      this.attackBuff > 0 ? `Attaquer (+${this.attackBuff})` : "Attaquer";
 
     this.ui.setActionLabels(attackLabel, "Objet", "Fuir");
   }
@@ -319,7 +385,9 @@ export class CombatManager {
           : itemId === "power_tonic"
             ? "Tonique de force"
             : "Charme garde";
-      this.ui.setMessage(`<strong class=\"action-name\">${itemName}</strong>Il n'y en a plus.`);
+      this.ui.setMessage(
+        `<strong class=\"action-name\">${itemName}</strong>Il n'y en a plus.`,
+      );
       this.ui.hideInventory();
       this.refreshActionLabels();
       return;
@@ -327,21 +395,34 @@ export class CombatManager {
 
     if (item.effect === "heal") {
       const healed = this.player.heal(item.value);
-      this.ui.setMessage(`<strong class=\"action-name\">${item.name}</strong>+${healed} PV.`);
-      this.ui.setPlayerStats(this.player.name, this.player.hp, this.player.maxHp);
+      this.ui.setMessage(
+        `<strong class=\"action-name\">${item.name}</strong>+${healed} PV.`,
+      );
+      this.ui.setPlayerStats(
+        this.player.name,
+        this.player.hp,
+        this.player.maxHp,
+      );
     } else if (item.effect === "buff") {
       this.attackBuff += item.value;
       this.buffTurnsLeft = item.durationTurns ?? 2;
-      this.ui.setMessage(`<strong class=\"action-name\">${item.name}</strong>ATQ +${item.value} pour ${this.buffTurnsLeft} tours.`);
+      this.ui.setMessage(
+        `<strong class=\"action-name\">${item.name}</strong>ATQ +${item.value} pour ${this.buffTurnsLeft} tours.`,
+      );
     } else {
       this.guardCharges += 1;
-      this.ui.setMessage(`<strong class=\"action-name\">${item.name}</strong>Le prochain coup ennemi est bloqué.`);
+      this.ui.setMessage(
+        `<strong class=\"action-name\">${item.name}</strong>Le prochain coup ennemi est bloqué.`,
+      );
     }
 
     this.ui.hideInventory();
     this.state.setPhase(CombatPhase.EnemyTurn, "Tour ennemi");
     this.ui.setButtonsDisabled(true);
     this.refreshActionLabels();
-    this.enemyTurnTimer = window.setTimeout(() => this.resolveEnemyTurn(), this.enemyDelay);
+    this.enemyTurnTimer = window.setTimeout(
+      () => this.resolveEnemyTurn(),
+      this.enemyDelay,
+    );
   }
 }
