@@ -8,11 +8,15 @@ export class Fighter {
   constructor(public readonly source: FighterSource) {}
 
   get name(): string {
-    return this.source instanceof Player ? this.source.getPlayerName() : this.source.name;
+    return this.source instanceof Player
+      ? this.source.getPlayerName()
+      : this.source.name;
   }
 
   get hp(): number {
-    return this.source instanceof Player ? this.source.getCurrentHp() : this.source.currentHp;
+    return this.source instanceof Player
+      ? this.source.getCurrentHp()
+      : this.source.currentHp;
   }
 
   set hp(value: number) {
@@ -24,24 +28,34 @@ export class Fighter {
     this.source.currentHp = Math.max(0, Math.min(value, this.maxHp));
     const health = this.source.getComponent("health");
     if (health && typeof health === "object" && "setHealth" in health) {
-      (health as { setHealth: (n: number) => void }).setHealth(this.source.currentHp);
+      (health as { setHealth: (n: number) => void }).setHealth(
+        this.source.currentHp,
+      );
     }
   }
 
   get maxHp(): number {
-    return this.source instanceof Player ? this.source.getMaxHp() : this.source.template.maxHp;
+    return this.source instanceof Player
+      ? this.source.getMaxHp()
+      : this.source.template.maxHp;
   }
 
   get attack(): number {
-    return this.source instanceof Player ? this.source.getAttackPower() : this.source.attack;
+    return this.source instanceof Player
+      ? this.source.getAttackPower()
+      : this.source.attack;
   }
 
   get defense(): number {
-    return this.source instanceof Player ? this.source.getDefensePower() : this.source.defense;
+    return this.source instanceof Player
+      ? this.source.getDefensePower()
+      : this.source.defense;
   }
 
   get speed(): number {
-    return this.source instanceof Player ? this.source.getSpeed() : this.source.speed;
+    return this.source instanceof Player
+      ? this.source.getSpeed()
+      : this.source.speed;
   }
 
   isAlive(): boolean {
@@ -67,6 +81,11 @@ export class Fighter {
   consumeInventoryItem(id: InventoryItemId): PlayerInventoryItem | null {
     if (!(this.source instanceof Player)) return null;
     return this.source.consumeInventoryItem(id);
+  }
+
+  addInventoryItem(id: InventoryItemId, amount: number): void {
+    if (!(this.source instanceof Player)) return;
+    this.source.addInventoryItem(id, amount);
   }
 
   getInventoryItemCount(id: InventoryItemId): number {

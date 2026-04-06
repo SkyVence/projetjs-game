@@ -21,6 +21,10 @@ export class UIRenderer {
   private inventoryList: HTMLDivElement;
   private inventoryCloseBtn: HTMLButtonElement;
   private enemySpriteEl: HTMLDivElement;
+  private rewardPanel: HTMLDivElement;
+  private rewardTitleEl: HTMLDivElement;
+  private rewardContentEl: HTMLDivElement;
+  private rewardCloseBtn: HTMLButtonElement;
 
   constructor(container: HTMLElement, playerName: string, enemyName: string) {
     this.root = document.createElement("div");
@@ -215,6 +219,27 @@ export class UIRenderer {
       this.inventoryCloseBtn,
     );
 
+    this.rewardPanel = document.createElement("div");
+    this.rewardPanel.className = "rpg-reward";
+    this.rewardPanel.hidden = true;
+
+    this.rewardTitleEl = document.createElement("div");
+    this.rewardTitleEl.className = "rpg-reward-title";
+    this.rewardTitleEl.textContent = "Récompense";
+
+    this.rewardContentEl = document.createElement("div");
+    this.rewardContentEl.className = "rpg-reward-content";
+
+    this.rewardCloseBtn = document.createElement("button");
+    this.rewardCloseBtn.className = "rpg-reward-close";
+    this.rewardCloseBtn.textContent = "Continuer";
+
+    this.rewardPanel.append(
+      this.rewardTitleEl,
+      this.rewardContentEl,
+      this.rewardCloseBtn,
+    );
+
     this.attackButton = document.createElement("button");
     this.attackButton.className = "rpg-action";
     this.attackButton.textContent = "Attaquer";
@@ -229,7 +254,7 @@ export class UIRenderer {
 
     this.actionPanel.append(this.attackButton, this.itemButton, this.runButton);
     dialogPane.append(this.timingWrap, this.messageEl);
-    menuPane.append(this.actionPanel, this.inventoryPanel);
+    menuPane.append(this.actionPanel, this.inventoryPanel, this.rewardPanel);
     commandBox.append(dialogPane, menuPane);
     footer.append(commandBox);
 
@@ -270,6 +295,7 @@ export class UIRenderer {
     onSelect: (id: string) => void,
     onCancel: () => void,
   ): void {
+    this.hideReward();
     this.inventoryList.innerHTML = "";
 
     items.forEach((item) => {
@@ -288,6 +314,34 @@ export class UIRenderer {
 
   hideInventory(): void {
     this.inventoryPanel.hidden = true;
+    this.actionPanel.hidden = false;
+  }
+
+  showReward(title: string, lines: string[], onClose: () => void): void {
+    this.hideInventory();
+    this.rewardTitleEl.textContent = title;
+    this.rewardContentEl.innerHTML = "";
+
+    if (lines.length === 0) {
+      const emptyLine = document.createElement("p");
+      emptyLine.className = "rpg-reward-empty";
+      emptyLine.textContent = "Aucune récompense.";
+      this.rewardContentEl.appendChild(emptyLine);
+    } else {
+      lines.forEach((line) => {
+        const paragraph = document.createElement("p");
+        paragraph.textContent = line;
+        this.rewardContentEl.appendChild(paragraph);
+      });
+    }
+
+    this.rewardCloseBtn.onclick = onClose;
+    this.rewardPanel.hidden = false;
+    this.actionPanel.hidden = true;
+  }
+
+  hideReward(): void {
+    this.rewardPanel.hidden = true;
     this.actionPanel.hidden = false;
   }
 

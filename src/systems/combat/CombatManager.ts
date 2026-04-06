@@ -6,10 +6,49 @@ import { UIRenderer } from "./UIRenderer";
 import { EnemyAI } from "./EnemyAI";
 import type { InventoryItemId } from "@/class/player";
 
+type LootDropId = InventoryItemId;
+
+type LootTableEntry = {
+  id: LootDropId;
+  name: string;
+  chance: number;
+  minAmount: number;
+  maxAmount: number;
+};
+
 export interface CombatResult {
   outcome: "victory" | "defeat" | "escaped";
   xpGained: number;
+  loot?: {
+    id: LootDropId;
+    name: string;
+    amount: number;
+  };
 }
+
+const LOOT_TABLE: LootTableEntry[] = [
+  {
+    id: "potion",
+    name: "Potion de soin",
+    chance: 0.5,
+    minAmount: 1,
+    maxAmount: 2,
+  },
+  {
+    id: "power_tonic",
+    name: "Tonique de force",
+    chance: 0.3,
+    minAmount: 1,
+    maxAmount: 1,
+  },
+  {
+    id: "guard_charm",
+    name: "Charme garde",
+    chance: 0.2,
+    minAmount: 1,
+    maxAmount: 1,
+  },
+];
 
 export class CombatManager {
   private ui: UIRenderer;
@@ -31,6 +70,7 @@ export class CombatManager {
   private attackBuff = 0;
   private buffTurnsLeft = 0;
   private guardCharges = 0;
+  private lootGranted = false;
   private readonly enemyParryChance = 0.2;
   private readonly damageBoost = 1.7;
   private readonly enemyDelay = 1900;
@@ -129,6 +169,7 @@ export class CombatManager {
   private beginPlayerAttack = (): void => {
     if (this.state.phase !== CombatPhase.PlayerTurn) return;
     this.ui.hideInventory();
+    this.ui.hideReward();
     this.refreshActionLabels();
     this.state.setPhase(CombatPhase.PlayerTiming, "Maintiens Espace");
     this.ui.setTurnLabel("Maintiens Espace");
@@ -228,14 +269,14 @@ export class CombatManager {
     window.setTimeout(() => {
       if (dealtDamage <= 0) {
         this.ui.setMessage(
-          `<strong class=\"action-name\">Aucun dégât.</strong><br>${this.enemy.name} prépare sa riposte...`,
+          `<strong class="action-name">Aucun dégât.</strong><br>${this.enemy.name} prépare sa riposte...`,
         );
       } else {
         const damage = this.enemy.applyDamage(finalDamage);
         this.ui.setMessage(
           parried
-            ? `<strong class=\"action-name\">Parade partielle.</strong><br>${this.enemy.name} prend ${damage} dégâts.`
-            : `<strong class=\"action-name\">Vous infligez ${damage} dégâts.</strong><br>${this.enemy.name} vacille.`,
+            ? `<strong class="action-name">Parade partielle.</strong><br>${this.enemy.name} prend ${damage} dégâts.`
+            : `<strong class="action-name">Vous infligez ${damage} dégâts.</strong><br>${this.enemy.name} vacille.`,
         );
       }
 
@@ -250,7 +291,27 @@ export class CombatManager {
 
       window.setTimeout(() => {
         if (!this.enemy.isAlive()) {
-          this.finish({ outcome: "victory", xpGained: 20 });
+          const loot = this.rollLootDrop();
+          const result: CombatResult = { outcome: "victory", xpGained: 20 };
+          if (loot) {
+            result.loot = loot;
+          }
+
+          this.ui.showReward(
+            "Victoire !",
+            loot
+              ? [
+                  `${this.enemy.name} laisse tomber ${loot.amount} ${loot.name}${loot.amount > 1 ? "s" : ""}.`,
+                  `Tu gagnes 20 XP.`,
+                ]
+              : [
+                  `${this.enemy.name} ne laisse rien derrière lui.`,
+                  `Tu gagnes 20 XP.`,
+                ],
+            () => {
+              this.finish(result);
+            },
+          );
           return;
         }
 
@@ -276,7 +337,7 @@ export class CombatManager {
     if (action.type === "heal") {
       const healed = this.enemy.heal(action.amount);
       this.ui.setMessage(
-        `<strong class=\"action-name\">${this.enemy.name} utilise ${action.label}</strong><br>+${healed} PV récupérés.`,
+        `<strong class="action-name">${this.enemy.name} utilise ${action.label}</strong><br>+${healed} PV récupérés.`,
       );
       this.ui.setEnemyStats(this.enemy.name, this.enemy.hp, this.enemy.maxHp);
     } else {
@@ -293,8 +354,8 @@ export class CombatManager {
       this.ui.flash("player");
       this.ui.setMessage(
         dealt === 0
-          ? `<strong class=\"action-name\">${this.enemy.name} utilise ${action.label}</strong><br>Le charme bloque l'attaque !`
-          : `<strong class=\"action-name\">${this.enemy.name} utilise ${action.label}</strong><br>${dealt} dégâts encaissés.`,
+          ? `<strong class="action-name">${this.enemy.name} utilise ${action.label}</strong><br>Le charme bloque l'attaque !`
+          : `<strong class="action-name">${this.enemy.name} utilise ${action.label}</strong><br>${dealt} dégâts encaissés.`,
       );
       this.ui.setPlayerStats(
         this.player.name,
@@ -362,7 +423,7 @@ export class CombatManager {
     if (this.buffTurnsLeft <= 0) {
       this.attackBuff = 0;
       this.ui.setMessage(
-        `<strong class=\"action-name\">Effet terminé</strong>Le bonus d'attaque disparaît.`,
+        `<strong class="action-name">Effet terminé</strong>Le bonus d'attaque disparaît.`,
       );
     }
   }
@@ -386,7 +447,7 @@ export class CombatManager {
             ? "Tonique de force"
             : "Charme garde";
       this.ui.setMessage(
-        `<strong class=\"action-name\">${itemName}</strong>Il n'y en a plus.`,
+        `<strong class="action-name">${itemName}</strong>Il n'y en a plus.`,
       );
       this.ui.hideInventory();
       this.refreshActionLabels();
@@ -396,7 +457,7 @@ export class CombatManager {
     if (item.effect === "heal") {
       const healed = this.player.heal(item.value);
       this.ui.setMessage(
-        `<strong class=\"action-name\">${item.name}</strong>+${healed} PV.`,
+        `<strong class="action-name">${item.name}</strong>+${healed} PV.`,
       );
       this.ui.setPlayerStats(
         this.player.name,
@@ -407,12 +468,12 @@ export class CombatManager {
       this.attackBuff += item.value;
       this.buffTurnsLeft = item.durationTurns ?? 2;
       this.ui.setMessage(
-        `<strong class=\"action-name\">${item.name}</strong>ATQ +${item.value} pour ${this.buffTurnsLeft} tours.`,
+        `<strong class="action-name">${item.name}</strong>ATQ +${item.value} pour ${this.buffTurnsLeft} tours.`,
       );
     } else {
       this.guardCharges += 1;
       this.ui.setMessage(
-        `<strong class=\"action-name\">${item.name}</strong>Le prochain coup ennemi est bloqué.`,
+        `<strong class="action-name">${item.name}</strong>Le prochain coup ennemi est bloqué.`,
       );
     }
 
@@ -424,5 +485,49 @@ export class CombatManager {
       () => this.resolveEnemyTurn(),
       this.enemyDelay,
     );
+  }
+
+  private rollLootDrop(): {
+    id: LootDropId;
+    name: string;
+    amount: number;
+  } | null {
+    if (this.lootGranted) return null;
+    this.lootGranted = true;
+
+    const roll = Math.random();
+    if (roll > 0.72) return null;
+
+    const lootPool = LOOT_TABLE.map((entry, index) => {
+      const bonus = index === 0 ? 0.1 : index === 1 ? 0.04 : 0.0;
+      return { ...entry, chance: entry.chance + bonus };
+    });
+
+    const totalChance = lootPool.reduce((sum, entry) => sum + entry.chance, 0);
+    let cursor = 0;
+    const normalizedRoll = roll * totalChance;
+
+    for (const entry of lootPool) {
+      cursor += entry.chance;
+      if (normalizedRoll <= cursor) {
+        const amount =
+          entry.minAmount === entry.maxAmount
+            ? entry.minAmount
+            : Math.floor(
+                entry.minAmount +
+                  Math.random() * (entry.maxAmount - entry.minAmount + 1),
+              );
+
+        this.player.addInventoryItem(entry.id, amount);
+
+        return {
+          id: entry.id,
+          name: entry.name,
+          amount,
+        };
+      }
+    }
+
+    return null;
   }
 }
