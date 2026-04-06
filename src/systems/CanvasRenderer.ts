@@ -42,7 +42,10 @@ export class CanvasRenderer {
   // Entity culling margin (tiles outside viewport to still render)
   private cullingMargin: number = 64; // pixels
 
-  constructor(private container: HTMLElement, private config: RenderConfig) {
+  constructor(
+    private container: HTMLElement,
+    private config: RenderConfig,
+  ) {
     this.internalWidth = config.width ?? 1280;
     this.internalHeight = config.height ?? 720;
 
@@ -56,7 +59,10 @@ export class CanvasRenderer {
 
     container.appendChild(this.canvas);
 
-    const ctx = this.canvas.getContext("2d", { alpha: false, desynchronized: true });
+    const ctx = this.canvas.getContext("2d", {
+      alpha: false,
+      desynchronized: true,
+    });
     if (!ctx) {
       throw new Error("Failed to get 2D context from canvas");
     }
@@ -341,8 +347,18 @@ export class CanvasRenderer {
     this.ctx.fillRect(x + size * 0.2, y + size * 0.28, eyeSize, eyeSize);
     this.ctx.fillRect(x + size * 0.62, y + size * 0.28, eyeSize, eyeSize);
     this.ctx.fillStyle = "#2a0505";
-    this.ctx.fillRect(x + size * 0.22, y + size * 0.62, eyeSize * 0.9, eyeSize * 0.9);
-    this.ctx.fillRect(x + size * 0.64, y + size * 0.62, eyeSize * 0.9, eyeSize * 0.9);
+    this.ctx.fillRect(
+      x + size * 0.22,
+      y + size * 0.62,
+      eyeSize * 0.9,
+      eyeSize * 0.9,
+    );
+    this.ctx.fillRect(
+      x + size * 0.64,
+      y + size * 0.62,
+      eyeSize * 0.9,
+      eyeSize * 0.9,
+    );
   }
 
   drawCharacter(
@@ -397,11 +413,22 @@ export class CanvasRenderer {
     this.ctx.fillText(`FPS: ${this.lastFpsValue}`, 15, 23);
   }
 
-  renderMap(map: GeneratedMap, offsetX: number, offsetY: number, tileSize: number): void {
+  renderMap(
+    map: GeneratedMap,
+    offsetX: number,
+    offsetY: number,
+    tileSize: number,
+  ): void {
     const startCol = Math.max(0, Math.floor(-offsetX / tileSize));
-    const endCol = Math.min(map.width, Math.ceil((-offsetX + this.canvas.width) / tileSize));
+    const endCol = Math.min(
+      map.width,
+      Math.ceil((-offsetX + this.canvas.width) / tileSize),
+    );
     const startRow = Math.max(0, Math.floor(-offsetY / tileSize));
-    const endRow = Math.min(map.height, Math.ceil((-offsetY + this.canvas.height) / tileSize));
+    const endRow = Math.min(
+      map.height,
+      Math.ceil((-offsetY + this.canvas.height) / tileSize),
+    );
 
     for (let row = startRow; row < endRow; row++) {
       const gridRow = map.grid[row];
@@ -431,22 +458,47 @@ export class CanvasRenderer {
           this.ctx.strokeRect(x + 2, y + 2, tileSize - 4, tileSize - 4);
 
           this.ctx.fillStyle = "rgba(255, 238, 184, 0.16)";
-          this.ctx.fillRect(x + tileSize * 0.2, y + tileSize * 0.2, tileSize * 0.6, tileSize * 0.08);
-          this.ctx.fillRect(x + tileSize * 0.2, y + tileSize * 0.72, tileSize * 0.6, tileSize * 0.08);
+          this.ctx.fillRect(
+            x + tileSize * 0.2,
+            y + tileSize * 0.2,
+            tileSize * 0.6,
+            tileSize * 0.08,
+          );
+          this.ctx.fillRect(
+            x + tileSize * 0.2,
+            y + tileSize * 0.72,
+            tileSize * 0.6,
+            tileSize * 0.08,
+          );
         }
 
         if (tile === TileType.Floor || tile === TileType.Corridor) {
           this.ctx.fillStyle = "rgba(0, 0, 0, 0.1)";
-          this.ctx.fillRect(x + tileSize * 0.3, y + tileSize * 0.3, tileSize * 0.4, tileSize * 0.4);
+          this.ctx.fillRect(
+            x + tileSize * 0.3,
+            y + tileSize * 0.3,
+            tileSize * 0.4,
+            tileSize * 0.4,
+          );
 
           if ((row + col) % 7 === 0) {
             this.ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
-            this.ctx.fillRect(x + tileSize * 0.15, y + tileSize * 0.15, tileSize * 0.15, tileSize * 0.15);
+            this.ctx.fillRect(
+              x + tileSize * 0.15,
+              y + tileSize * 0.15,
+              tileSize * 0.15,
+              tileSize * 0.15,
+            );
           }
 
           if ((row * 3 + col * 5) % 11 === 0) {
             this.ctx.fillStyle = "rgba(16, 12, 24, 0.35)";
-            this.ctx.fillRect(x + tileSize * 0.72, y + tileSize * 0.18, tileSize * 0.12, tileSize * 0.12);
+            this.ctx.fillRect(
+              x + tileSize * 0.72,
+              y + tileSize * 0.18,
+              tileSize * 0.12,
+              tileSize * 0.12,
+            );
           }
         }
 
@@ -460,7 +512,12 @@ export class CanvasRenderer {
 
           if ((row + col) % 4 === 0) {
             this.ctx.fillStyle = "rgba(0, 0, 0, 0.22)";
-            this.ctx.fillRect(x + tileSize * 0.22, y + tileSize * 0.22, tileSize * 0.18, tileSize * 0.18);
+            this.ctx.fillRect(
+              x + tileSize * 0.22,
+              y + tileSize * 0.22,
+              tileSize * 0.18,
+              tileSize * 0.18,
+            );
           }
         }
 

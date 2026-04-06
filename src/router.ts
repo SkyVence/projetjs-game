@@ -15,7 +15,11 @@ function NotFound(): HTMLElement {
   return div;
 }
 
-export function registerRoute(path: string, view: ViewWithCleanup, cleanup?: () => void) {
+export function registerRoute(
+  path: string,
+  view: ViewWithCleanup,
+  cleanup?: () => void,
+) {
   if (!allowedPattern.test(path)) {
     throw new Error(`Invalid path: ${path}`);
   }
@@ -25,7 +29,10 @@ export function registerRoute(path: string, view: ViewWithCleanup, cleanup?: () 
   }
 }
 
-export function registerRoutes(routeMap: Record<string, ViewWithCleanup>, cleanupMap?: Record<string, () => void>) {
+export function registerRoutes(
+  routeMap: Record<string, ViewWithCleanup>,
+  cleanupMap?: Record<string, () => void>,
+) {
   for (const [path, view] of Object.entries(routeMap)) {
     const cleanup = cleanupMap?.[path];
     registerRoute(path, view, cleanup);
@@ -41,7 +48,7 @@ function runCleanup() {
 
 function renderView(path: string) {
   runCleanup();
-  
+
   const view = routes[path];
   if (!view) {
     base.innerHTML = "";
@@ -79,7 +86,7 @@ export function navigateTo(path: string) {
   if (!allowedPattern.test(path)) {
     throw new Error(`Invalid path: ${path}`);
   }
-  
+
   window.history.pushState({}, "", path);
   handleRouteChange(path);
 }

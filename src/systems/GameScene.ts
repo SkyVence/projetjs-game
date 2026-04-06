@@ -42,6 +42,9 @@ export class GameScene {
   private movementAccumulator = 0;
   private escapeCollisionLockUntil = 0;
   private dungeonLevel = 1;
+  private fleeAttemptsThisFloor = 0;
+  private readonly maxFleeAttemptsPerFloor = 3;
+  private readonly fleeFailureChance = 0.15;
   private hudRoot: HTMLDivElement | null = null;
   private menuPanel: HTMLDivElement | null = null;
   private menuContent: HTMLDivElement | null = null;
@@ -49,6 +52,7 @@ export class GameScene {
   private menuOpen = false;
   private externalUI: HTMLElement | null = null;
   private externalUIToggle: HTMLElement | null = null;
+  private hudMeta: HTMLElement | null = null;
 
   private map: GeneratedMap | null = null;
 
@@ -71,14 +75,17 @@ export class GameScene {
   private staticDirty = true;
   private entitiesDirty = true;
 
-  constructor(private container: HTMLElement, private config: GameSceneConfig) {
+  constructor(
+    private container: HTMLElement,
+    private config: GameSceneConfig,
+  ) {
     const fixedWidth = config.viewportWidth ?? 1280;
     const fixedHeight = config.viewportHeight ?? 720;
 
     this.renderer = new CanvasRenderer(container, {
       width: fixedWidth,
       height: fixedHeight,
-      backgroundColor: "#000",
+      backgroundColor: "#0000",
       tileSize: this.TILE_SIZE,
       aspectRatio: config.aspectRatio ?? 16 / 9,
       fixedResolution: true,
@@ -147,7 +154,7 @@ export class GameScene {
     const mapGen = new MapGenerator({
       width: this.MAP_TILES_W,
       height: this.MAP_TILES_H,
-      maxDepth: Math.min(6, 4 + Math.floor((this.dungeonLevel - 1) / 2)),
+      maxDepth: Math.min(8, 4 + Math.floor((this.dungeonLevel - 1) / 2)),
     });
 
     // Generate map with the stored seed for deterministic layout
@@ -162,7 +169,9 @@ export class GameScene {
       playerPosition.x = spawn.x * this.TILE_SIZE;
       playerPosition.y = spawn.y * this.TILE_SIZE;
     } else {
-      this.player.addComponent(new Position(spawn.x * this.TILE_SIZE, spawn.y * this.TILE_SIZE));
+      this.player.addComponent(
+        new Position(spawn.x * this.TILE_SIZE, spawn.y * this.TILE_SIZE),
+      );
     }
 
     const playerVelocity = this.player.getComponent<Velocity>("velocity");
@@ -178,10 +187,16 @@ export class GameScene {
       playerHealth.setMaxHealth(this.player.getMaxHp());
       playerHealth.setHealth(this.player.getCurrentHp());
     } else {
-      this.player.addComponent(new Health(this.player.stats.hp, this.player.getMaxHp()));
+      this.player.addComponent(
+        new Health(this.player.stats.hp, this.player.getMaxHp()),
+      );
     }
 
-    this.lastSafePosition = { x: spawn.x * this.TILE_SIZE, y: spawn.y * this.TILE_SIZE };
+    this.lastSafePosition = {
+      x: spawn.x * this.TILE_SIZE,
+      y: spawn.y * this.TILE_SIZE,
+    };
+
     this.entities.push(this.player);
     this.spawnEnemies();
     this.camera.follow(this.player);
@@ -318,6 +333,7 @@ export class GameScene {
     }
 
     this.dungeonLevel = nextLevel;
+    this.fleeAttemptsThisFloor = 0;
     this.startLevel();
     this.escapeCollisionLockUntil = performance.now() + 700;
   }
@@ -332,7 +348,7 @@ export class GameScene {
     
     // Store reference to meta bar for updates
     if (metaBar) {
-      (this as unknown as Record<string, unknown>).metaBar = metaBar;
+      this.hudMeta = metaBar;
     }
 
     // Create in-game menu (top-right toggle for camp menu)
@@ -342,6 +358,7 @@ export class GameScene {
     this.menuToggle = document.createElement("button");
     this.menuToggle.className = "ingame-menu-toggle";
     this.menuToggle.textContent = "Campement";
+    this.updateHudVisibility();
 
     this.menuPanel = document.createElement("div");
     this.menuPanel.className = "ingame-menu-panel";
@@ -369,6 +386,7 @@ export class GameScene {
     const closeBtn = document.createElement("button");
     closeBtn.className = "ingame-menu-btn ingame-menu-close";
     closeBtn.textContent = "Fermer";
+    closeBtn.type = "button";
 
     const exitBtn = document.createElement("button");
     exitBtn.className = "ingame-menu-btn ingame-menu-exit";
@@ -382,26 +400,42 @@ export class GameScene {
     this.hudRoot.append(this.menuToggle, this.menuPanel);
     this.container.appendChild(this.hudRoot);
 
+    this.menuPanel.hidden = true;
+    this.menuPanel.style.display = "none";
+    this.menuOpen = false;
+
     this.menuToggle.addEventListener("click", () => this.toggleMenu());
 
     inventoryBtn.addEventListener("click", () => this.renderInventoryPanel());
     statsBtn.addEventListener("click", () => this.renderStatsPanel());
     saveBtn.addEventListener("click", () => this.handleSave());
-    closeBtn.addEventListener("click", () => this.toggleMenu(false));
+    closeBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      this.toggleMenu(false);
+    });
     exitBtn.addEventListener("click", () => this.handleExit());
 
     this.updateExternalUI();
   }
 
   private toggleMenu(force?: boolean): void {
-    if (!this.menuPanel || this.inCombat) return;
+    if (!this.menuPanel) return;
+
     this.menuOpen = force ?? !this.menuOpen;
     this.menuPanel.hidden = !this.menuOpen;
+    this.menuPanel.style.display = this.menuOpen ? "block" : "none";
+
     if (this.menuToggle) {
+      this.menuToggle.hidden = this.menuOpen;
       this.menuToggle.textContent = this.menuOpen ? "Fermer" : "Campement";
+      this.updateHudVisibility();
     }
+
     if (this.menuOpen) {
       this.renderStatsPanel();
+    } else {
+      this.menuContent?.replaceChildren();
     }
   }
 
@@ -410,10 +444,9 @@ export class GameScene {
     const { hp, maxHp, xp, xpToNext, level, attack, defense, speed } = this.player.stats;
     
     // Update top meta bar
-    const metaBar = (this as unknown as Record<string, unknown>).metaBar as HTMLElement | undefined;
-    if (metaBar) {
+    if (this.hudMeta) {
       const ratio = Math.max(0, Math.min(100, Math.round((xp / Math.max(1, xpToNext)) * 100)));
-      metaBar.textContent = `Etage ${this.dungeonLevel} | ${this.player.getPlayerName()} | Niv ${level} | XP ${xp}/${xpToNext} (${ratio}%)`;
+      this.hudMeta.textContent = `Etage ${this.dungeonLevel} | ${this.player.getPlayerName()} | Niv ${level} | XP ${xp}/${xpToNext} (${ratio}%)`;
     }
 
     // Update external UI panel (if elements exist)
@@ -454,6 +487,16 @@ export class GameScene {
     }
   }
 
+  private updateHudVisibility(): void {
+    if (this.hudMeta) {
+      this.hudMeta.hidden = this.inCombat;
+    }
+
+    if (this.menuToggle) {
+      this.menuToggle.hidden = this.inCombat || this.menuOpen;
+    }
+  }
+
   private renderInventoryPanel(): void {
     if (!this.menuContent || !this.player) return;
 
@@ -471,7 +514,8 @@ export class GameScene {
   private renderStatsPanel(): void {
     if (!this.menuContent || !this.player) return;
 
-    const { hp, maxHp, level, xp, xpToNext, attack, defense, speed } = this.player.stats;
+    const { hp, maxHp, level, xp, xpToNext, attack, defense, speed } =
+      this.player.stats;
     this.menuContent.innerHTML = `
       <h3>Statistiques</h3>
       <p>Nom: ${this.player.getPlayerName()}</p>
@@ -555,8 +599,10 @@ export class GameScene {
 
         const tile = this.map!.grid[ty]?.[tx];
         if (tile === undefined || tile === TileType.Wall) continue;
-        if (Math.hypot(tx - this.map!.entry.x, ty - this.map!.entry.y) < 3) continue;
-        if (Math.hypot(tx - this.map!.exit.x, ty - this.map!.exit.y) < 2) continue;
+        if (Math.hypot(tx - this.map!.entry.x, ty - this.map!.entry.y) < 3)
+          continue;
+        if (Math.hypot(tx - this.map!.exit.x, ty - this.map!.exit.y) < 2)
+          continue;
 
         const tooCloseToAnother = Array.from(occupiedTiles).some((coord) => {
           const [oxStr, oyStr] = coord.split(",");
@@ -566,7 +612,8 @@ export class GameScene {
         });
         if (tooCloseToAnother) continue;
 
-        const template = spawnPool[(roomIndex + spawned + attempt) % spawnPool.length]!;
+        const template =
+          spawnPool[(roomIndex + spawned + attempt) % spawnPool.length]!;
         const scaledTemplate = this.scaleEnemyTemplate(template);
 
         // Generate deterministic enemy ID from position and template
@@ -618,26 +665,28 @@ export class GameScene {
     const depthBonus = Math.max(0, this.dungeonLevel - 1);
     if (depthBonus === 0) return template;
 
-    const hpScale = 1 + depthBonus * 0.12;
-    const atkScale = 1 + depthBonus * 0.08;
-    const defScale = 1 + depthBonus * 0.06;
-    const xpScale = 1 + depthBonus * 0.1;
+    const hpScale = 1 + depthBonus * 0.28;
+    const atkScale = 1 + depthBonus * 0.24;
+    const defScale = 1 + depthBonus * 0.18;
+    const speedScale = 1 + depthBonus * 0.1;
+    const xpScale = 1 + depthBonus * 0.22;
 
     return {
       ...template,
       maxHp: Math.max(1, Math.round(template.maxHp * hpScale)),
       attack: Math.max(1, Math.round(template.attack * atkScale)),
       defense: Math.max(0, Math.round(template.defense * defScale)),
+      speed: Math.max(1, Math.round(template.speed * speedScale)),
       xpReward: Math.max(1, Math.round(template.xpReward * xpScale)),
     };
   }
 
   private roomContains(room: Room, point: { x: number; y: number }): boolean {
     return (
-      point.x >= room.x
-      && point.x < room.x + room.w
-      && point.y >= room.y
-      && point.y < room.y + room.h
+      point.x >= room.x &&
+      point.x < room.x + room.w &&
+      point.y >= room.y &&
+      point.y < room.y + room.h
     );
   }
 
@@ -755,7 +804,11 @@ export class GameScene {
     return tile === TileType.Wall;
   }
 
-  private canMoveTo(x: number, y: number, size: number = this.TILE_SIZE): boolean {
+  private canMoveTo(
+    x: number,
+    y: number,
+    size: number = this.TILE_SIZE,
+  ): boolean {
     const corners = [
       { x, y },
       { x: x + size - 1, y },
@@ -789,7 +842,10 @@ export class GameScene {
     const vel = this.player.getComponent<Velocity>("velocity");
     if (!pos || !vel) return;
 
-    if (pos.x !== this.lastSafePosition.x || pos.y !== this.lastSafePosition.y) {
+    if (
+      pos.x !== this.lastSafePosition.x ||
+      pos.y !== this.lastSafePosition.y
+    ) {
       this.lastSafePosition = { x: pos.x, y: pos.y };
     }
 
@@ -858,6 +914,7 @@ export class GameScene {
     if (this.inCombat || !this.player) return;
 
     this.inCombat = true;
+    this.updateHudVisibility();
     this.gameLoop.stop();
     
     // Hide external UI during combat
@@ -870,9 +927,19 @@ export class GameScene {
 
     const engagedEnemy = enemy;
     this.combatManager?.destroy();
-    this.combatManager = new CombatManager(this.container, this.player, enemy);
+    this.combatManager = new CombatManager(this.container, this.player, enemy, {
+      attemptsLeft: Math.max(
+        0,
+        this.maxFleeAttemptsPerFloor - this.fleeAttemptsThisFloor,
+      ),
+      maxAttempts: this.maxFleeAttemptsPerFloor,
+      failureChance: this.fleeFailureChance,
+      onAttempt: () => {
+        this.fleeAttemptsThisFloor += 1;
+      },
+    });
 
-    void this.combatManager.start().then((result) => {
+    this.combatManager.start().then((result) => {
       if (!this.player) return;
 
       if (result.outcome === "victory") {
@@ -880,7 +947,10 @@ export class GameScene {
         gameState.markEnemyDead(this.dungeonLevel, engagedEnemy.id);
         this.removeEnemy(engagedEnemy);
         const xpGain = Math.max(result.xpGained, engagedEnemy.xpReward);
-        this.player.gainExperience(xpGain);
+        const levelsGained = this.player.gainExperience(xpGain);
+        if (levelsGained > 0) {
+          this.updateExternalUI();
+        }
       } else if (result.outcome === "defeat") {
         this.player.revive(1);
       } else if (result.outcome === "escaped") {
@@ -900,6 +970,7 @@ export class GameScene {
       }
       
       this.updateExternalUI();
+      this.updateHudVisibility();
       this.gameLoop.start();
     });
   }
@@ -917,8 +988,20 @@ export class GameScene {
     const len = Math.max(1, Math.hypot(dx, dy));
     const push = 128;
 
-    enemyPos.x = Math.max(0, Math.min(enemyPos.x + (dx / len) * push, this.config.mapWidth - this.TILE_SIZE));
-    enemyPos.y = Math.max(0, Math.min(enemyPos.y + (dy / len) * push, this.config.mapHeight - this.TILE_SIZE));
+    enemyPos.x = Math.max(
+      0,
+      Math.min(
+        enemyPos.x + (dx / len) * push,
+        this.config.mapWidth - this.TILE_SIZE,
+      ),
+    );
+    enemyPos.y = Math.max(
+      0,
+      Math.min(
+        enemyPos.y + (dy / len) * push,
+        this.config.mapHeight - this.TILE_SIZE,
+      ),
+    );
     this.escapeCollisionLockUntil = performance.now() + 1200;
   }
 
@@ -939,10 +1022,10 @@ export class GameScene {
     const bSize = b === this.player ? this.PLAYER_SIZE : this.TILE_SIZE;
 
     return !(
-      aPos.x + aSize <= bPos.x
-      || aPos.x >= bPos.x + bSize
-      || aPos.y + aSize <= bPos.y
-      || aPos.y >= bPos.y + bSize
+      aPos.x + aSize <= bPos.x ||
+      aPos.x >= bPos.x + bSize ||
+      aPos.y + aSize <= bPos.y ||
+      aPos.y >= bPos.y + bSize
     );
   }
 }
