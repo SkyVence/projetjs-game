@@ -39,6 +39,9 @@ export class GameScene {
   private movementAccumulator = 0;
   private escapeCollisionLockUntil = 0;
   private dungeonLevel = 1;
+  private fleeAttemptsThisFloor = 0;
+  private readonly maxFleeAttemptsPerFloor = 3;
+  private readonly fleeFailureChance = 0.15;
   private hudRoot: HTMLDivElement | null = null;
   private hudMeta: HTMLDivElement | null = null;
   private menuPanel: HTMLDivElement | null = null;
@@ -179,6 +182,7 @@ export class GameScene {
 
   private advanceToNextLevel(): void {
     this.dungeonLevel += 1;
+    this.fleeAttemptsThisFloor = 0;
     this.startLevel();
     this.escapeCollisionLockUntil = performance.now() + 700;
   }
@@ -410,16 +414,18 @@ export class GameScene {
     const depthBonus = Math.max(0, this.dungeonLevel - 1);
     if (depthBonus === 0) return template;
 
-    const hpScale = 1 + depthBonus * 0.18;
-    const atkScale = 1 + depthBonus * 0.14;
-    const defScale = 1 + depthBonus * 0.1;
-    const xpScale = 1 + depthBonus * 0.16;
+    const hpScale = 1 + depthBonus * 0.28;
+    const atkScale = 1 + depthBonus * 0.24;
+    const defScale = 1 + depthBonus * 0.18;
+    const speedScale = 1 + depthBonus * 0.1;
+    const xpScale = 1 + depthBonus * 0.22;
 
     return {
       ...template,
       maxHp: Math.max(1, Math.round(template.maxHp * hpScale)),
       attack: Math.max(1, Math.round(template.attack * atkScale)),
       defense: Math.max(0, Math.round(template.defense * defScale)),
+      speed: Math.max(1, Math.round(template.speed * speedScale)),
       xpReward: Math.max(1, Math.round(template.xpReward * xpScale)),
     };
   }
@@ -646,7 +652,17 @@ export class GameScene {
 
     const engagedEnemy = enemy;
     this.combatManager?.destroy();
-    this.combatManager = new CombatManager(this.container, this.player, enemy);
+    this.combatManager = new CombatManager(this.container, this.player, enemy, {
+      attemptsLeft: Math.max(
+        0,
+        this.maxFleeAttemptsPerFloor - this.fleeAttemptsThisFloor,
+      ),
+      maxAttempts: this.maxFleeAttemptsPerFloor,
+      failureChance: this.fleeFailureChance,
+      onAttempt: () => {
+        this.fleeAttemptsThisFloor += 1;
+      },
+    });
 
     this.combatManager.start().then((result) => {
       if (!this.player) return;

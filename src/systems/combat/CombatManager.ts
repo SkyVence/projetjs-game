@@ -16,6 +16,13 @@ type LootTableEntry = {
   maxAmount: number;
 };
 
+type FleeState = {
+  attemptsLeft: number;
+  maxAttempts: number;
+  failureChance?: number;
+  onAttempt?: () => void;
+};
+
 export interface CombatResult {
   outcome: "victory" | "defeat" | "escaped";
   xpGained: number;
@@ -71,17 +78,22 @@ export class CombatManager {
   private buffTurnsLeft = 0;
   private guardCharges = 0;
   private lootGranted = false;
-  private readonly enemyParryChance = 0.2;
-  private readonly damageBoost = 1.6;
-  private readonly enemyDelay = 1900;
+  private fleeState: FleeState;
+  private readonly defaultFleeFailureChance = 0.15;
+  private readonly enemyParryChance = 0.1;
+  private readonly damageBoost = 2.05;
+  private readonly enemyDelay = 1300;
 
   constructor(
     private container: HTMLElement,
     player: Player,
     enemy: Enemy,
+    fleeState?: FleeState,
   ) {
     this.player = new Fighter(player);
     this.enemy = new Fighter(enemy);
+    this.fleeState = fleeState ?? { attemptsLeft: 3, maxAttempts: 3 };
+    this.fleeState.failureChance ??= this.defaultFleeFailureChance;
     this.ui = new UIRenderer(container, this.player.name, this.enemy.name);
     this.ui.setPlayerStats(this.player.name, this.player.hp, this.player.maxHp);
     this.ui.setEnemyStats(this.enemy.name, this.enemy.hp, this.enemy.maxHp);
@@ -341,13 +353,15 @@ export class CombatManager {
       );
       this.ui.setEnemyStats(this.enemy.name, this.enemy.hp, this.enemy.maxHp);
     } else {
-      const variance = 0.8 + Math.random() * 0.18;
+      const variance = 0.98 + Math.random() * 0.18;
       const rawDamage = Math.max(
         1,
         Math.round(this.enemy.attack * action.powerMultiplier * variance),
       );
+      const pressureBonus = Math.max(1, Math.round(this.enemy.attack * 0.18));
+      const finalEnemyDamage = rawDamage + pressureBonus;
       const dealt =
-        this.guardCharges > 0 ? 0 : this.player.applyDamage(rawDamage);
+        this.guardCharges > 0 ? 0 : this.player.applyDamage(finalEnemyDamage);
       if (this.guardCharges > 0) {
         this.guardCharges -= 1;
       }
@@ -398,6 +412,32 @@ export class CombatManager {
       this.state.phase === CombatPhase.Defeat
     )
       return;
+
+    if (this.fleeState.attemptsLeft <= 0) {
+      this.ui.setMessage(
+        `<strong class="action-name">Fuite impossible</strong>Tu as déjà tenté de fuir ${this.fleeState.maxAttempts} fois durant cet étage.`,
+      );
+      this.ui.setButtonsDisabled(true);
+      return;
+    }
+
+    this.fleeState.attemptsLeft -= 1;
+    this.fleeState.onAttempt?.();
+    this.refreshActionLabels();
+
+    if (
+      Math.random() <
+      (this.fleeState.failureChance ?? this.defaultFleeFailureChance)
+    ) {
+      this.ui.setMessage(
+        `<strong class="action-name">Fuite ratée</strong>Tu n'as pas réussi à t'échapper.`,
+      );
+      if (this.fleeState.attemptsLeft <= 0) {
+        this.ui.setButtonsDisabled(true);
+      }
+      return;
+    }
+
     this.finish({ outcome: "escaped", xpGained: 0 });
   };
 
@@ -431,8 +471,13 @@ export class CombatManager {
   private refreshActionLabels(): void {
     const attackLabel =
       this.attackBuff > 0 ? `Attaquer (+${this.attackBuff})` : "Attaquer";
+    const fleeLabel =
+      this.fleeState.attemptsLeft > 0
+        ? `Fuir (${this.fleeState.attemptsLeft}/${this.fleeState.maxAttempts})`
+        : "Fuir";
 
-    this.ui.setActionLabels(attackLabel, "Objet", "Fuir");
+    this.ui.setActionLabels(attackLabel, "Objet", fleeLabel);
+    this.ui.runButton.disabled = this.fleeState.attemptsLeft <= 0;
   }
 
   private consumeItemFromInventory(itemId: InventoryItemId): void {
@@ -478,13 +523,9 @@ export class CombatManager {
     }
 
     this.ui.hideInventory();
-    this.state.setPhase(CombatPhase.EnemyTurn, "Tour ennemi");
-    this.ui.setButtonsDisabled(true);
+    this.state.setPhase(CombatPhase.PlayerTurn, "Ton tour");
+    this.ui.setButtonsDisabled(false);
     this.refreshActionLabels();
-    this.enemyTurnTimer = window.setTimeout(
-      () => this.resolveEnemyTurn(),
-      this.enemyDelay,
-    );
   }
 
   private rollLootDrop(): {
