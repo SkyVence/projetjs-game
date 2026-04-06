@@ -55,17 +55,11 @@ function GameRoute(): HTMLElement {
   const container = document.createElement("div");
   container.className = "game-container";
 
-  wrapper.appendChild(container);
-
-  if (!player) {
-    // If no player, redirect to menu
-    navigateTo("/");
-    return wrapper;
-  }
-
-  gameScene = new GameScene(container, {
-    mapWidth: 2400,
-    mapHeight: 2400,
+  gameScene = new GameScene(app, {
+    viewportWidth: 1100,
+    viewportHeight: 700,
+    mapWidth: 3200,
+    mapHeight: 3200,
   });
   gameScene.setPlayer(player);
   gameScene.initialize();

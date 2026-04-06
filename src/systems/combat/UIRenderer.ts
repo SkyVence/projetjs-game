@@ -20,6 +20,7 @@ export class UIRenderer {
   private inventoryPanel: HTMLDivElement;
   private inventoryList: HTMLDivElement;
   private inventoryCloseBtn: HTMLButtonElement;
+  private enemySpriteEl: HTMLDivElement;
 
   constructor(container: HTMLElement, playerName: string, enemyName: string) {
     this.root = document.createElement("div");
@@ -61,21 +62,24 @@ export class UIRenderer {
     const decorations = document.createElement("div");
     decorations.className = "rpg-decorations";
 
-    const bushPositions = [
-      { left: "28%", top: "54%", size: 24 },
-      { left: "44%", top: "78%", size: 30 },
-      { left: "56%", top: "60%", size: 22 },
-      { left: "68%", top: "82%", size: 28 },
-      { left: "76%", top: "56%", size: 20 },
+    const decorationPositions = [
+      { left: "22%", top: "56%", size: 26, kind: "rock" },
+      { left: "32%", top: "24%", size: 30, kind: "torch" },
+      { left: "52%", top: "68%", size: 30, kind: "rock" },
+      { left: "66%", top: "24%", size: 30, kind: "torch" },
+      { left: "78%", top: "74%", size: 22, kind: "rock" },
     ];
 
-    bushPositions.forEach((pos) => {
-      const bush = document.createElement("div");
-      bush.className = "rpg-bush";
-      bush.style.left = pos.left;
-      bush.style.top = pos.top;
-      bush.style.setProperty("--size", `${pos.size}px`);
-      decorations.appendChild(bush);
+    decorationPositions.forEach((pos) => {
+      const deco = document.createElement("div");
+      deco.className = `rpg-deco rpg-deco-${pos.kind}`;
+      deco.style.left = pos.left;
+      deco.style.top = pos.top;
+      deco.style.setProperty("--size", `${pos.size}px`);
+      if (pos.kind === "torch") {
+        deco.appendChild(document.createElement("i"));
+      }
+      decorations.appendChild(deco);
     });
 
     const enemyBox = document.createElement("div");
@@ -84,15 +88,15 @@ export class UIRenderer {
     const enemyStatus = document.createElement("div");
     enemyStatus.className = "rpg-status-box rpg-status-box-enemy";
 
-    const enemySprite = document.createElement("div");
-    enemySprite.className = "rpg-sprite rpg-sprite-enemy";
+    this.enemySpriteEl = document.createElement("div");
+    this.enemySpriteEl.className = "rpg-sprite rpg-sprite-enemy";
 
     const enemyShadow = document.createElement("div");
     enemyShadow.className = "rpg-shadow rpg-shadow-enemy";
 
     const enemyFigure = document.createElement("div");
     enemyFigure.className = "rpg-figure";
-    enemyFigure.append(enemySprite, enemyShadow);
+    enemyFigure.append(this.enemySpriteEl, enemyShadow);
 
     const enemyHud = document.createElement("div");
     enemyHud.className = "rpg-hud rpg-hud-enemy";
@@ -228,6 +232,8 @@ export class UIRenderer {
     scene.append(header, battlefield, footer);
     this.root.appendChild(scene);
     container.appendChild(this.root);
+
+    this.enemySpriteEl.dataset.monster = this.resolveMonster(enemyName);
   }
 
   setMessage(message: string): void {
@@ -246,6 +252,7 @@ export class UIRenderer {
   setEnemyStats(name: string, hp: number, maxHp: number): void {
     this.enemyHpEl.textContent = `${hp}/${maxHp} PV`;
     this.enemyHpFill.style.width = `${Math.max(0, (hp / maxHp) * 100)}%`;
+    this.enemySpriteEl.dataset.monster = this.resolveMonster(name);
   }
 
   setButtonsDisabled(disabled: boolean): void {
@@ -305,5 +312,13 @@ export class UIRenderer {
 
   destroy(): void {
     this.root.remove();
+  }
+
+  private resolveMonster(enemyName: string): string {
+    const name = enemyName.toLowerCase();
+    if (name.includes("squelette")) return "skeleton";
+    if (name.includes("chauve")) return "bat";
+    if (name.includes("champi")) return "mush";
+    return "slime";
   }
 }
