@@ -1,8 +1,11 @@
 :root {
     --bg-overlay: rgba(7, 12, 24, 0.58);
+    --panel-overlay: rgba(10, 16, 32, 0.72);
     --text-main: #f2eadf;
+    --text-muted: rgba(242, 234, 223, 0.75);
+    --accent: #7ad7ff;
+    --glow: rgba(122, 215, 255, 0.35);
     --menu-item-width: clamp(220px, 24vw, 360px);
-    --combat-font: "Trebuchet MS", "Verdana", sans-serif;
 }
 
 html,
@@ -243,6 +246,7 @@ textarea {
 .menu-item {
     width: var(--menu-item-width);
     height: 52px;
+    min-height: 52px;
     border: 2px solid rgba(255, 255, 255, 0.35);
     border-radius: 18px;
     background: rgba(8, 12, 18, 0.22);
@@ -277,6 +281,7 @@ textarea {
 .player-name-input {
     width: var(--menu-item-width);
     height: 52px;
+    min-height: 52px;
     box-sizing: border-box;
     padding: 0 14px;
     border: 2px solid rgba(255, 255, 255, 0.35);
@@ -287,13 +292,6 @@ textarea {
     font-size: clamp(1rem, 1.2vw, 1.2rem);
     outline: none;
     backdrop-filter: blur(4px);
-}
-
-.not-found {
-    text-align: center;
-    padding: 20px;
-    font-size: 1.5rem;
-    color: black;
 }
 
 .player-name-input::placeholder {
@@ -1045,10 +1043,6 @@ textarea {
 
     .menu-right {
         min-height: 220px;
-    }
-
-    .menu-nav {
-        align-items: stretch;
     }
 
     .menu-item,

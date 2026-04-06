@@ -5,9 +5,8 @@ export type NavigateFunction = (path: string) => void;
 export interface MenuViewCallbacks {
   onExit: () => void;
   onNewGame: (playerName: string) => void;
-  onCredits: () => void;
   onContinue: () => void;
-  onSettings: () => void;
+
   canContinue?: boolean;
 }
 
@@ -33,14 +32,6 @@ export function MenuView(callbacks: MenuViewCallbacks): HTMLElement {
   newGameBtn.className = "menu-item";
   newGameBtn.textContent = "New Game";
 
-  const settingsBtn = document.createElement("button");
-  settingsBtn.className = "menu-item";
-  settingsBtn.textContent = "Settings";
-
-  const creditsBtn = document.createElement("button");
-  creditsBtn.className = "menu-item";
-  creditsBtn.textContent = "Credits";
-
   const exitBtn = document.createElement("button");
   exitBtn.className = "menu-item";
   exitBtn.textContent = "Exit";
@@ -56,8 +47,7 @@ export function MenuView(callbacks: MenuViewCallbacks): HTMLElement {
   newGameWrap.className = "new-game-wrap";
   newGameWrap.append(newGameBtn, playerNameInput);
 
-  menuNav.append(continueBtn, newGameWrap, settingsBtn, creditsBtn, exitBtn);
-
+  menuNav.append(continueBtn, newGameWrap, exitBtn);
   menuLeft.append(menuNav);
   menuScreen.append(menuLeft, menuRight);
 
@@ -71,8 +61,10 @@ export function MenuView(callbacks: MenuViewCallbacks): HTMLElement {
   });
 
   newGameBtn.addEventListener("click", () => {
-    playerNameInput.hidden = false;
-    playerNameInput.focus();
+    playerNameInput.hidden = !playerNameInput.hidden;
+    if (!playerNameInput.hidden) {
+      playerNameInput.focus();
+    }
   });
 
   playerNameInput.addEventListener("keydown", (e) => {
@@ -84,16 +76,8 @@ export function MenuView(callbacks: MenuViewCallbacks): HTMLElement {
     }
   });
 
-  creditsBtn.addEventListener("click", () => {
-    callbacks.onCredits();
-  });
-
   continueBtn.addEventListener("click", () => {
     callbacks.onContinue();
-  });
-
-  settingsBtn.addEventListener("click", () => {
-    callbacks.onSettings();
   });
 
   return menuScreen;
@@ -117,20 +101,6 @@ export function createNewGameBtn(): HTMLButtonElement {
   const btn = document.createElement("button");
   btn.className = "menu-item";
   btn.textContent = "New Game";
-  return btn;
-}
-
-export function createSettingsBtn(): HTMLButtonElement {
-  const btn = document.createElement("button");
-  btn.className = "menu-item";
-  btn.textContent = "Settings";
-  return btn;
-}
-
-export function createCreditsBtn(): HTMLButtonElement {
-  const btn = document.createElement("button");
-  btn.className = "menu-item";
-  btn.textContent = "Credits";
   return btn;
 }
 

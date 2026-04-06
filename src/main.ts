@@ -1,6 +1,6 @@
 import { Player } from "@/class/player";
-import { GameScene } from "@/systems/GameScene";
 import { MenuView, ExitTitle } from "@/menu";
+import { GameScene } from "@/systems/GameScene";
 import { startRouter, navigateTo, registerRoutes } from "./router";
 import { clearSave, hasSave, loadGame } from "@/utils/save";
 
@@ -42,12 +42,7 @@ function MenuRoute(): HTMLElement {
       if (!player) return;
       navigateTo("/game");
     },
-    onCredits: () => {
-      navigateTo("/credits");
-    },
-    onSettings: () => {
-      navigateTo("/settings");
-    },
+
     canContinue: hasSave() || !!player,
   });
 }
@@ -93,58 +88,6 @@ function GameRouteCleanup(): void {
   cleanupGame();
 }
 
-function CreditsRoute(): HTMLElement {
-  const container = document.createElement("div");
-  container.className = "credits-screen";
-
-  const title = document.createElement("h1");
-  title.textContent = "Credits";
-  title.className = "credits-title";
-
-  const content = document.createElement("div");
-  content.className = "credits-content";
-  content.innerHTML = `
-    <p>VillainDungeon</p>
-    <p>A dungeon crawler game</p>
-    <p>Built with TypeScript and Vite</p>
-  `;
-
-  const backBtn = document.createElement("button");
-  backBtn.className = "menu-item";
-  backBtn.textContent = "Back to Menu";
-  backBtn.addEventListener("click", () => {
-    navigateTo("/");
-  });
-
-  container.append(title, content, backBtn);
-  return container;
-}
-
-function SettingsRoute(): HTMLElement {
-  const container = document.createElement("div");
-  container.className = "settings-screen";
-
-  const title = document.createElement("h1");
-  title.textContent = "Settings";
-  title.className = "settings-title";
-
-  const content = document.createElement("div");
-  content.className = "settings-content";
-  content.innerHTML = `
-    <p>Settings will be available soon.</p>
-  `;
-
-  const backBtn = document.createElement("button");
-  backBtn.className = "menu-item";
-  backBtn.textContent = "Back to Menu";
-  backBtn.addEventListener("click", () => {
-    navigateTo("/");
-  });
-
-  container.append(title, content, backBtn);
-  return container;
-}
-
 function ExitRoute(): HTMLElement {
   return ExitTitle();
 }
@@ -152,8 +95,6 @@ function ExitRoute(): HTMLElement {
 const routes = {
   "/": MenuRoute,
   "/game": GameRoute,
-  "/credits": CreditsRoute,
-  "/settings": SettingsRoute,
   "/exit": ExitRoute,
 };
 
