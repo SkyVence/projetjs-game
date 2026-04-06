@@ -60,7 +60,10 @@ function GameRoute(): HTMLElement {
     aspectRatio: 16 / 9,
   });
   gameScene.setPlayer(player);
-  gameScene.initialize();
+  requestAnimationFrame(() => {
+    if (!wrapper.isConnected || !gameScene) return;
+    gameScene.initialize();
+  });
 
   gameEscapeHandler = (e: KeyboardEvent) => {
     if (e.key === "Escape") {

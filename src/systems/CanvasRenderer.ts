@@ -38,7 +38,8 @@ export class CanvasRenderer {
     this.canvas.style.border = "4px solid #111";
     this.canvas.style.imageRendering = "pixelated";
     this.canvas.style.display = "block";
-    this.canvas.style.margin = "0 auto";
+    this.canvas.style.width = "100%";
+    this.canvas.style.height = "100%";
     this.canvas.style.boxShadow = "6px 6px 0 #000";
 
     container.appendChild(this.canvas);
@@ -50,6 +51,8 @@ export class CanvasRenderer {
     this.ctx = ctx;
 
     this.updateCSSSize();
+    requestAnimationFrame(() => this.updateCSSSize());
+    window.setTimeout(() => this.updateCSSSize(), 50);
 
     let resizeTimeout: number;
     window.addEventListener("resize", () => {
@@ -61,6 +64,12 @@ export class CanvasRenderer {
   private updateCSSSize(): void {
     const containerWidth = this.container.clientWidth;
     const containerHeight = this.container.clientHeight;
+    if (containerWidth <= 0 || containerHeight <= 0) {
+      this.canvas.style.width = "100%";
+      this.canvas.style.height = "100%";
+      return;
+    }
+
     const containerRatio = containerWidth / containerHeight;
 
     let cssWidth: number;
@@ -74,8 +83,8 @@ export class CanvasRenderer {
       cssHeight = cssWidth / this.aspectRatio;
     }
 
-    this.canvas.style.width = `${cssWidth}px`;
-    this.canvas.style.height = `${cssHeight}px`;
+    this.canvas.style.width = `${Math.max(1, cssWidth)}px`;
+    this.canvas.style.height = `${Math.max(1, cssHeight)}px`;
   }
 
   clear(): void {
