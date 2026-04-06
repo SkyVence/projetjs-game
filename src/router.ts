@@ -1,8 +1,10 @@
 type View = () => HTMLElement;
+type ViewWithCleanup = View & { _cleanup?: () => void };
 
-let routes: Record<string, View> = {};
+let routes: Record<string, ViewWithCleanup> = {};
 
 let base: HTMLElement;
+let currentCleanup: (() => void) | null = null;
 
 const allowedPattern = new RegExp("^/$|^/[A-Za-z0-9]+(/[A-Za-z0-9]+)*$"); // Check if the path is valid
 
@@ -13,16 +15,48 @@ function NotFound(): HTMLElement {
   return div;
 }
 
-export function registerRoute(path: string, view: View) {
+export function registerRoute(path: string, view: ViewWithCleanup, cleanup?: () => void) {
   if (!allowedPattern.test(path)) {
     throw new Error(`Invalid path: ${path}`);
   }
   routes[path] = view;
+  // Store cleanup function with the route
+  if (cleanup) {
+    view._cleanup = cleanup;
+  }
 }
 
-function renderView(view: View) {
+export function registerRoutes(routeMap: Record<string, ViewWithCleanup>, cleanupMap?: Record<string, () => void>) {
+  for (const [path, view] of Object.entries(routeMap)) {
+    const cleanup = cleanupMap?.[path];
+    registerRoute(path, view, cleanup);
+  }
+}
+
+function runCleanup() {
+  if (currentCleanup) {
+    currentCleanup();
+    currentCleanup = null;
+  }
+}
+
+function renderView(path: string) {
+  runCleanup();
+  
+  const view = routes[path];
+  if (!view) {
+    base.innerHTML = "";
+    base.appendChild(NotFound());
+    throw new Error(`No route found for path: ${path}`);
+  }
+
   base.innerHTML = "";
   base.appendChild(view());
+  
+  // Store cleanup for this route if it has one
+  if (view._cleanup) {
+    currentCleanup = view._cleanup;
+  }
 }
 
 export function startRouter(root: HTMLElement | null) {
@@ -30,34 +64,37 @@ export function startRouter(root: HTMLElement | null) {
   base = root;
   let currentPath = window.location.pathname;
 
-  const view = routes[currentPath];
+  // Handle initial render
+  handleRouteChange(currentPath);
+}
+
+function handleRouteChange(path: string) {
+  const view = routes[path];
   if (!view) {
-    renderView(NotFound);
-    throw new Error(`No route found for path: ${currentPath}`);
+    renderView(path);
+    return;
   }
 
-  renderView(view);
+  renderView(path);
 }
 
 export function navigateTo(path: string) {
   if (!allowedPattern.test(path)) {
     throw new Error(`Invalid path: ${path}`);
   }
-  const view = routes[path];
+  
   window.history.pushState({}, "", path);
-  if (!view) {
-    renderView(NotFound);
-    throw new Error(`No route found for path: ${path}`);
-  }
-  renderView(view);
+  handleRouteChange(path);
 }
 
 window.addEventListener("popstate", () => {
   const currentPath = window.location.pathname;
-  const view = routes[currentPath];
-  if (!view) {
-    renderView(NotFound);
-    throw new Error(`No route found for path: ${currentPath}`);
-  }
-  renderView(view);
+  handleRouteChange(currentPath);
 });
+
+// Cleanup function for external use
+export function cleanup() {
+  runCleanup();
+  routes = {};
+  currentCleanup = null;
+}
