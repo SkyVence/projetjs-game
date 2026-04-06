@@ -10,12 +10,16 @@ import { Camera } from "@/systems/Camera";
 import { GameLoop } from "@/systems/GameLoop";
 import { ENEMY_TEMPLATES } from "@/data/enemies";
 import { CombatManager } from "@/systems/combat/CombatManager";
+import { MapGenerator, TileType } from "@/utils/MapGen";
+import type { GeneratedMap, Room } from "@/utils/MapGen";
+import { navigateTo } from "@/router";
 
 export interface GameSceneConfig {
   mapWidth: number;
   mapHeight: number;
-  viewportWidth: number;
-  viewportHeight: number;
+  viewportWidth?: number;
+  viewportHeight?: number;
+  aspectRatio?: number;
 }
 
 export class GameScene {
@@ -39,15 +43,18 @@ export class GameScene {
 
   constructor(private container: HTMLElement, private config: GameSceneConfig) {
     this.renderer = new CanvasRenderer(container, {
-      width: config.viewportWidth,
-      height: config.viewportHeight,
+      width: fixedWidth,
+      height: fixedHeight,
       backgroundColor: "#000",
       tileSize: this.TILE_SIZE,
+      aspectRatio: config.aspectRatio ?? 16 / 9,
+      fixedResolution: true,
     });
 
+    // Use fixed internal resolution for camera (all players see same area)
     this.camera = new Camera({
-      viewportWidth: config.viewportWidth,
-      viewportHeight: config.viewportHeight,
+      viewportWidth: fixedWidth,
+      viewportHeight: fixedHeight,
       mapWidth: config.mapWidth,
       mapHeight: config.mapHeight,
       smoothness: 0.15,
@@ -65,13 +72,38 @@ export class GameScene {
       throw new Error("Player must be provided before initializing the scene");
     }
 
+    // Generate dungeon map
+    const mapGen = new MapGenerator({
+      width: this.MAP_TILES_W,
+      height: this.MAP_TILES_H,
+      maxDepth: 4,
+    });
+    this.map = mapGen.generate();
+
+    // Get spawn room (first room where entry is)
+    this.spawnRoom = this.map.rooms[0] ?? null;
+
+    // Fixed viewport size for fair gameplay (same for all players)
+    const fixedViewportWidth = 1280;
+    const fixedViewportHeight = 720;
+
+    // Update camera with fixed viewport dimensions
+    this.camera = new Camera({
+      viewportWidth: fixedViewportWidth,
+      viewportHeight: fixedViewportHeight,
+      mapWidth: this.MAP_TILES_W * this.TILE_SIZE,
+      mapHeight: this.MAP_TILES_H * this.TILE_SIZE,
+      smoothness: 0.15,
+      scrollMargin: 150,
+    });
+
     this.entities = [];
     this.enemies = [];
     this.movementAccumulator = 0;
 
     this.player.addComponent(new Position(100, 100));
     this.player.addComponent(new Velocity(0, 0));
-    this.player.addComponent(new Health(this.player.stats.hp, this.player.getMaxHp()));
+    this.player.addComponent(new Health(this.player.stats.hp));
 
     this.entities.push(this.player);
     this.spawnEnemies();
@@ -186,12 +218,95 @@ export class GameScene {
         this.player,
         offsetX,
         offsetY,
-        this.TILE_SIZE,
+        this.PLAYER_SIZE,
         this.lastMovementInput,
       );
     }
 
     this.renderer.drawFPS(1 / Math.max(deltaTime, 0.001));
+  }
+
+  // Wall collision helpers
+  private pixelToTile(pixel: number): number {
+    return Math.floor(pixel / this.TILE_SIZE);
+  }
+
+  private isWallTile(tx: number, ty: number): boolean {
+    if (!this.map) return true;
+    if (tx < 0 || tx >= this.map.width || ty < 0 || ty >= this.map.height) {
+      return true;
+    }
+    const row = this.map.grid[ty];
+    if (!row) return true;
+    const tile = row[tx];
+    return tile === TileType.Wall;
+  }
+
+  private canMoveTo(x: number, y: number, size: number = this.TILE_SIZE): boolean {
+    // Check all four corners of the entity
+    const corners = [
+      { x: x, y: y },
+      { x: x + size - 1, y: y },
+      { x: x, y: y + size - 1 },
+      { x: x + size - 1, y: y + size - 1 },
+    ];
+
+    for (const corner of corners) {
+      const tx = this.pixelToTile(corner.x);
+      const ty = this.pixelToTile(corner.y);
+      if (this.isWallTile(tx, ty)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private checkExitReached(x: number, y: number): boolean {
+    if (!this.map) return false;
+    const tx = this.pixelToTile(x + this.PLAYER_SIZE / 2);
+    const ty = this.pixelToTile(y + this.PLAYER_SIZE / 2);
+    const row = this.map.grid[ty];
+    if (!row) return false;
+    return row[tx] === TileType.Exit;
+  }
+
+  private updatePlayerMovement(deltaTime: number): void {
+    if (!this.player) return;
+
+    const pos = this.player.getComponent<Position>("position");
+    const vel = this.player.getComponent<Velocity>("velocity");
+    if (!pos || !vel) return;
+
+    // Save safe position before moving
+    if (pos.x !== this.lastSafePosition.x || pos.y !== this.lastSafePosition.y) {
+      this.lastSafePosition = { x: pos.x, y: pos.y };
+    }
+
+    // Calculate new position
+    const newX = pos.x + vel.x * deltaTime;
+    const newY = pos.y + vel.y * deltaTime;
+
+    // Clamp to map bounds (using PLAYER_SIZE)
+    const maxX = this.MAP_TILES_W * this.TILE_SIZE - this.PLAYER_SIZE;
+    const maxY = this.MAP_TILES_H * this.TILE_SIZE - this.PLAYER_SIZE;
+    const clampedX = Math.max(0, Math.min(newX, maxX));
+    const clampedY = Math.max(0, Math.min(newY, maxY));
+
+    // Try X movement with player size collision
+    if (this.canMoveTo(clampedX, pos.y, this.PLAYER_SIZE)) {
+      pos.x = clampedX;
+    }
+
+    // Try Y movement with player size collision
+    if (this.canMoveTo(pos.x, clampedY, this.PLAYER_SIZE)) {
+      pos.y = clampedY;
+    }
+
+    // Check if player reached exit
+    if (this.checkExitReached(pos.x, pos.y)) {
+      navigateTo("/");
+      return;
+    }
   }
 
   private updateEnemyMovement(deltaTime: number): void {
@@ -221,11 +336,24 @@ export class GameScene {
       const chaseX = Math.abs(dx) > 18 ? Math.sign(dx) * step : 0;
       const chaseY = Math.abs(dy) > 18 ? Math.sign(dy) * step : 0;
 
-      pos.x += chaseX + patrol.dx * deltaTime * 0.05;
-      pos.y += chaseY + patrol.dy * deltaTime * 0.05;
+      const newX = pos.x + chaseX + patrol.dx * deltaTime * 0.05;
+      const newY = pos.y + chaseY + patrol.dy * deltaTime * 0.05;
 
-      pos.x = Math.max(0, Math.min(pos.x, this.config.mapWidth - this.TILE_SIZE));
-      pos.y = Math.max(0, Math.min(pos.y, this.config.mapHeight - this.TILE_SIZE));
+      // Clamp to map bounds
+      const maxX = this.MAP_TILES_W * this.TILE_SIZE - this.TILE_SIZE;
+      const maxY = this.MAP_TILES_H * this.TILE_SIZE - this.TILE_SIZE;
+      const clampedX = Math.max(0, Math.min(newX, maxX));
+      const clampedY = Math.max(0, Math.min(newY, maxY));
+
+      // Try X movement with wall collision
+      if (this.canMoveTo(clampedX, pos.y)) {
+        pos.x = clampedX;
+      }
+
+      // Try Y movement with wall collision
+      if (this.canMoveTo(pos.x, clampedY)) {
+        pos.y = clampedY;
+      }
     });
   }
 
@@ -286,6 +414,10 @@ export class GameScene {
     const aPos = a.getComponent<Position>("position");
     const bPos = b.getComponent<Position>("position");
     if (!aPos || !bPos) return false;
+
+    // Player uses PLAYER_SIZE, enemies use TILE_SIZE
+    const aSize = a === this.player ? this.PLAYER_SIZE : this.TILE_SIZE;
+    const bSize = b === this.player ? this.PLAYER_SIZE : this.TILE_SIZE;
 
     return !(
       aPos.x + this.TILE_SIZE <= bPos.x
