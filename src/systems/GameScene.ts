@@ -38,10 +38,19 @@ export class GameScene {
   private movementAccumulator = 0;
   private escapeCollisionLockUntil = 0;
 
-  private readonly PLAYER_SPEED = 150;
-  private readonly TILE_SIZE = 32;
+  private map: GeneratedMap | null = null;
+  private spawnRoom: Room | null = null;
+
+  private readonly PLAYER_SPEED = 220;
+  private readonly TILE_SIZE = 48;
+  private readonly PLAYER_SIZE = 40;
+  private readonly MAP_TILES_W = 40;
+  private readonly MAP_TILES_H = 40;
 
   constructor(private container: HTMLElement, private config: GameSceneConfig) {
+    const fixedWidth = config.viewportWidth ?? 1280;
+    const fixedHeight = config.viewportHeight ?? 720;
+
     this.renderer = new CanvasRenderer(container, {
       width: fixedWidth,
       height: fixedHeight,
@@ -51,13 +60,13 @@ export class GameScene {
       fixedResolution: true,
     });
 
-    // Use fixed internal resolution for camera (all players see same area)
     this.camera = new Camera({
       viewportWidth: fixedWidth,
       viewportHeight: fixedHeight,
-      mapWidth: config.mapWidth,
-      mapHeight: config.mapHeight,
+      mapWidth: this.MAP_TILES_W * this.TILE_SIZE,
+      mapHeight: this.MAP_TILES_H * this.TILE_SIZE,
       smoothness: 0.15,
+      scrollMargin: 150,
     });
 
     this.gameLoop = new GameLoop();
@@ -72,38 +81,22 @@ export class GameScene {
       throw new Error("Player must be provided before initializing the scene");
     }
 
-    // Generate dungeon map
     const mapGen = new MapGenerator({
       width: this.MAP_TILES_W,
       height: this.MAP_TILES_H,
       maxDepth: 4,
     });
     this.map = mapGen.generate();
-
-    // Get spawn room (first room where entry is)
     this.spawnRoom = this.map.rooms[0] ?? null;
-
-    // Fixed viewport size for fair gameplay (same for all players)
-    const fixedViewportWidth = 1280;
-    const fixedViewportHeight = 720;
-
-    // Update camera with fixed viewport dimensions
-    this.camera = new Camera({
-      viewportWidth: fixedViewportWidth,
-      viewportHeight: fixedViewportHeight,
-      mapWidth: this.MAP_TILES_W * this.TILE_SIZE,
-      mapHeight: this.MAP_TILES_H * this.TILE_SIZE,
-      smoothness: 0.15,
-      scrollMargin: 150,
-    });
 
     this.entities = [];
     this.enemies = [];
     this.movementAccumulator = 0;
 
-    this.player.addComponent(new Position(100, 100));
+    const spawn = this.map.entry;
+    this.player.addComponent(new Position(spawn.x * this.TILE_SIZE, spawn.y * this.TILE_SIZE));
     this.player.addComponent(new Velocity(0, 0));
-    this.player.addComponent(new Health(this.player.stats.hp));
+    this.player.addComponent(new Health(this.player.stats.hp, this.player.getMaxHp()));
 
     this.entities.push(this.player);
     this.spawnEnemies();
@@ -122,21 +115,26 @@ export class GameScene {
   }
 
   private spawnEnemies(): void {
-    const enemyPositions: Array<[number, number]> = [
-      [300, 300],
-      [520, 420],
-      [760, 220],
-      [980, 760],
-      [1240, 1040],
-      [1680, 560],
-    ];
+    if (!this.map || !this.spawnRoom) return;
 
-    enemyPositions.forEach((pos, index) => {
-      const template = ENEMY_TEMPLATES[index % ENEMY_TEMPLATES.length]!;
-      const enemy = new Enemy(template, pos[0], pos[1]);
-      this.enemies.push(enemy);
-      this.entities.push(enemy);
-    });
+    const room = this.spawnRoom;
+    const enemyTileX = Math.floor(room.x + room.w / 2);
+    const enemyTileY = Math.floor(room.y + room.h / 2);
+
+    let spawnX = enemyTileX;
+    const spawnY = enemyTileY;
+    const distanceToEntry = Math.hypot(spawnX - this.map.entry.x, spawnY - this.map.entry.y);
+    if (distanceToEntry < 3) {
+      spawnX += 2;
+    }
+
+    const pixelX = spawnX * this.TILE_SIZE;
+    const pixelY = spawnY * this.TILE_SIZE;
+
+    const template = ENEMY_TEMPLATES[0]!;
+    const enemy = new Enemy(template, pixelX, pixelY);
+    this.enemies.push(enemy);
+    this.entities.push(enemy);
   }
 
   private update(deltaTime: number): void {
@@ -166,17 +164,7 @@ export class GameScene {
       }
     }
 
-    this.entities.forEach((entity) => {
-      const pos = entity.getComponent<Position>("position");
-      const vel = entity.getComponent<Velocity>("velocity");
-      if (!pos || !vel) return;
-
-      pos.x += vel.x * movementStep;
-      pos.y += vel.y * movementStep;
-      pos.x = Math.max(0, Math.min(pos.x, this.config.mapWidth - this.TILE_SIZE));
-      pos.y = Math.max(0, Math.min(pos.y, this.config.mapHeight - this.TILE_SIZE));
-    });
-
+    this.updatePlayerMovement(movementStep);
     this.updateEnemyMovement(movementStep);
 
     const canTriggerCombat = performance.now() >= this.escapeCollisionLockUntil;
@@ -201,16 +189,12 @@ export class GameScene {
     this.renderer.clear();
     const { offsetX, offsetY } = this.camera.getOffset();
 
-    this.renderer.drawDungeonBackground(
-      offsetX,
-      offsetY,
-      this.TILE_SIZE,
-      this.config.mapWidth,
-      this.config.mapHeight,
-    );
+    if (this.map) {
+      this.renderer.renderMap(this.map, offsetX, offsetY, this.TILE_SIZE);
+    }
 
     this.enemies.forEach((enemy) => {
-      this.renderer.drawEnemy(enemy, offsetX, offsetY, this.TILE_SIZE);
+      this.renderer.drawEntity(enemy, offsetX, offsetY, enemy.color, this.TILE_SIZE);
     });
 
     if (this.player) {
@@ -226,7 +210,6 @@ export class GameScene {
     this.renderer.drawFPS(1 / Math.max(deltaTime, 0.001));
   }
 
-  // Wall collision helpers
   private pixelToTile(pixel: number): number {
     return Math.floor(pixel / this.TILE_SIZE);
   }
@@ -243,11 +226,10 @@ export class GameScene {
   }
 
   private canMoveTo(x: number, y: number, size: number = this.TILE_SIZE): boolean {
-    // Check all four corners of the entity
     const corners = [
-      { x: x, y: y },
-      { x: x + size - 1, y: y },
-      { x: x, y: y + size - 1 },
+      { x, y },
+      { x: x + size - 1, y },
+      { x, y: y + size - 1 },
       { x: x + size - 1, y: y + size - 1 },
     ];
 
@@ -277,35 +259,27 @@ export class GameScene {
     const vel = this.player.getComponent<Velocity>("velocity");
     if (!pos || !vel) return;
 
-    // Save safe position before moving
     if (pos.x !== this.lastSafePosition.x || pos.y !== this.lastSafePosition.y) {
       this.lastSafePosition = { x: pos.x, y: pos.y };
     }
 
-    // Calculate new position
     const newX = pos.x + vel.x * deltaTime;
     const newY = pos.y + vel.y * deltaTime;
-
-    // Clamp to map bounds (using PLAYER_SIZE)
     const maxX = this.MAP_TILES_W * this.TILE_SIZE - this.PLAYER_SIZE;
     const maxY = this.MAP_TILES_H * this.TILE_SIZE - this.PLAYER_SIZE;
     const clampedX = Math.max(0, Math.min(newX, maxX));
     const clampedY = Math.max(0, Math.min(newY, maxY));
 
-    // Try X movement with player size collision
     if (this.canMoveTo(clampedX, pos.y, this.PLAYER_SIZE)) {
       pos.x = clampedX;
     }
 
-    // Try Y movement with player size collision
     if (this.canMoveTo(pos.x, clampedY, this.PLAYER_SIZE)) {
       pos.y = clampedY;
     }
 
-    // Check if player reached exit
     if (this.checkExitReached(pos.x, pos.y)) {
       navigateTo("/");
-      return;
     }
   }
 
@@ -324,10 +298,7 @@ export class GameScene {
       const dx = playerPos.x - pos.x;
       const dy = playerPos.y - pos.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
-
-      if (distance > 320) {
-        return;
-      }
+      if (distance > 320) return;
 
       const patrol = enemy.tickPatrol(deltaTime);
       const speed = enemy.speed * deltaTime;
@@ -339,18 +310,14 @@ export class GameScene {
       const newX = pos.x + chaseX + patrol.dx * deltaTime * 0.05;
       const newY = pos.y + chaseY + patrol.dy * deltaTime * 0.05;
 
-      // Clamp to map bounds
       const maxX = this.MAP_TILES_W * this.TILE_SIZE - this.TILE_SIZE;
       const maxY = this.MAP_TILES_H * this.TILE_SIZE - this.TILE_SIZE;
       const clampedX = Math.max(0, Math.min(newX, maxX));
       const clampedY = Math.max(0, Math.min(newY, maxY));
 
-      // Try X movement with wall collision
       if (this.canMoveTo(clampedX, pos.y)) {
         pos.x = clampedX;
       }
-
-      // Try Y movement with wall collision
       if (this.canMoveTo(pos.x, clampedY)) {
         pos.y = clampedY;
       }
@@ -358,8 +325,7 @@ export class GameScene {
   }
 
   private startCombat(enemy: Enemy): void {
-    if (this.inCombat) return;
-    if (!this.player) return;
+    if (this.inCombat || !this.player) return;
 
     this.inCombat = true;
     this.gameLoop.stop();
@@ -415,15 +381,14 @@ export class GameScene {
     const bPos = b.getComponent<Position>("position");
     if (!aPos || !bPos) return false;
 
-    // Player uses PLAYER_SIZE, enemies use TILE_SIZE
     const aSize = a === this.player ? this.PLAYER_SIZE : this.TILE_SIZE;
     const bSize = b === this.player ? this.PLAYER_SIZE : this.TILE_SIZE;
 
     return !(
-      aPos.x + this.TILE_SIZE <= bPos.x
-      || aPos.x >= bPos.x + this.TILE_SIZE
-      || aPos.y + this.TILE_SIZE <= bPos.y
-      || aPos.y >= bPos.y + this.TILE_SIZE
+      aPos.x + aSize <= bPos.x
+      || aPos.x >= bPos.x + bSize
+      || aPos.y + aSize <= bPos.y
+      || aPos.y >= bPos.y + bSize
     );
   }
 }

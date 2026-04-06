@@ -5,90 +5,77 @@ import { startRouter, navigateTo, registerRoutes } from "./router";
 
 let player: Player | null = null;
 let gameScene: GameScene | null = null;
+let gameEscapeHandler: ((e: KeyboardEvent) => void) | null = null;
+let app: HTMLElement | null = null;
 
-// Cleanup function for game route
-function cleanupGame() {
+function cleanupGame(): void {
+  if (gameEscapeHandler) {
+    window.removeEventListener("keydown", gameEscapeHandler);
+    gameEscapeHandler = null;
+  }
   gameScene?.destroy();
   gameScene = null;
 }
 
-// Route: / (Menu - default)
 function MenuRoute(): HTMLElement {
-  const menu = MenuView({
+  return MenuView({
     onExit: () => {
       navigateTo("/exit");
     },
     onNewGame: (playerName: string) => {
       player = new Player(playerName);
-      startGame(app);
-    },
-    onCredits: () => {
-      app.textContent = "Credits";
-    },
-    onContinue: () => {
-      if (!player) return;
-      startGame(app);
-    },
-    onSettings: () => {
-      app.textContent = "Settings";
-    },
-    onCredits: () => {
-      navigateTo("/credits");
+      navigateTo("/game");
     },
     onContinue: () => {
       if (!player) return;
       navigateTo("/game");
     },
+    onCredits: () => {
+      navigateTo("/credits");
+    },
     onSettings: () => {
       navigateTo("/settings");
     },
   });
-
-  return menu;
 }
 
-// Route: /game (Game)
 function GameRoute(): HTMLElement {
   const wrapper = document.createElement("div");
   wrapper.className = "game-wrapper";
 
   const container = document.createElement("div");
   container.className = "game-container";
+  wrapper.appendChild(container);
 
-  gameScene = new GameScene(app, {
-    viewportWidth: 1100,
-    viewportHeight: 700,
-    mapWidth: 3200,
-    mapHeight: 3200,
+  if (!player) {
+    if (window.location.pathname !== "/") {
+      window.history.replaceState({}, "", "/");
+    }
+    return MenuRoute();
+  }
+
+  gameScene = new GameScene(container, {
+    mapWidth: 40 * 48,
+    mapHeight: 40 * 48,
+    aspectRatio: 16 / 9,
   });
   gameScene.setPlayer(player);
   gameScene.initialize();
 
-  // Handle Escape key to go back to menu
-  const escapeHandler = (e: KeyboardEvent) => {
+  gameEscapeHandler = (e: KeyboardEvent) => {
     if (e.key === "Escape") {
       navigateTo("/");
     }
   };
-
-  window.addEventListener("keydown", escapeHandler);
-
-  // Store reference to handler for cleanup
-  (GameRoute as typeof GameRoute & { _escapeHandler?: (e: KeyboardEvent) => void })._escapeHandler = escapeHandler;
+  window.addEventListener("keydown", gameEscapeHandler);
 
   return wrapper;
 }
 
-// Define the cleanup function that will be called when leaving the game route
-function GameRouteCleanup() {
-  const handler = (GameRoute as typeof GameRoute & { _escapeHandler?: (e: KeyboardEvent) => void })._escapeHandler;
-  if (handler) {
-    window.removeEventListener("keydown", handler);
-  }
+function GameRouteCleanup(): void {
   cleanupGame();
 }
 
-// Route: /credits
 function CreditsRoute(): HTMLElement {
   const container = document.createElement("div");
   container.className = "credits-screen";
@@ -116,7 +103,6 @@ function CreditsRoute(): HTMLElement {
   return container;
 }
 
-// Route: /settings
 function SettingsRoute(): HTMLElement {
   const container = document.createElement("div");
   container.className = "settings-screen";
@@ -142,12 +128,10 @@ function SettingsRoute(): HTMLElement {
   return container;
 }
 
-// Route: /exit
 function ExitRoute(): HTMLElement {
   return ExitTitle();
 }
 
-// Register all routes
 const routes = {
   "/": MenuRoute,
   "/game": GameRoute,
@@ -162,8 +146,10 @@ const cleanups: Record<string, () => void> = {
 
 registerRoutes(routes, cleanups);
 
-// Start the router
-const app = document.getElementById("app");
+app = document.getElementById("app");
 if (app) {
-  showMenu(app);
+  startRouter(app);
+  if (window.location.pathname === "/game" && !player) {
+    navigateTo("/");
+  }
 }
