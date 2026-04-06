@@ -1,11 +1,11 @@
-import { gameDataService } from "@/data";
+import { gameDataService, gameState } from "@/data";
 import { LoadingScreen, ErrorScreen } from "@/components";
 import { MenuRoute, cleanupMenuRoute } from "./routes/menuRoute";
 import { createGameRoute, cleanupGameRoute } from "./routes/gameRoute";
 import { CreditsRoute } from "./routes/creditsRoute";
 import { SettingsRoute } from "./routes/settingsRoute";
 import { ExitRoute } from "./routes/exitRoute";
-import { startRouter, registerRoutes } from "./router";
+import { startRouter, registerRoutes, type TitleGetter } from "./router";
 import { Logger, SystemName } from "./utils/logger";
 
 const logger = new Logger();
@@ -16,6 +16,14 @@ const routes = {
   "/credits": CreditsRoute,
   "/settings": SettingsRoute,
   "/exit": ExitRoute,
+};
+
+const titles: Record<string, TitleGetter> = {
+  "/": "Menu",
+  "/game": () => `Level ${gameState.dungeonLevel}`,
+  "/credits": "Credits",
+  "/settings": "Settings",
+  "/exit": "Goodbye",
 };
 
 const cleanups: Record<string, () => void> = {
@@ -40,7 +48,7 @@ async function initializeApp(): Promise<void> {
     logger.log(SystemName.Database, "Game data service initialized");
 
     // Success - start the router
-    registerRoutes(routes, cleanups);
+    registerRoutes(routes, titles, cleanups);
     startRouter(app);
   } catch (error) {
     // Show error screen with retry button

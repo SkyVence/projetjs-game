@@ -1,6 +1,6 @@
 import { MenuView, SlotListView, NewGameDialog } from "@/menu";
 import { gameState, gameDataService } from "@/data";
-import { navigateTo } from "../router";
+import { navigateTo, setDynamicTitle } from "../router";
 
 let unsubscribe: (() => void) | null = null;
 let menuElementRef: HTMLElement | null = null;
@@ -58,6 +58,9 @@ export function MenuRoute(): HTMLElement {
 }
 
 function renderSlotSelection(app: HTMLElement): void {
+  // Update page title for slot selection view
+  setDynamicTitle("Select Save");
+
   app.innerHTML = "";
   app.appendChild(
     SlotListView({
