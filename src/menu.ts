@@ -11,9 +11,9 @@ export interface ContinuePreview {
 export interface MenuViewCallbacks {
   onExit: () => void;
   onNewGame: (playerName: string) => void;
-  onCredits: () => void;
   onContinue: () => void;
-  onSettings: () => void;
+  onCredits?: () => void;
+
   canContinue?: boolean;
   continuePreview?: ContinuePreview | null;
   loadingContinuePreview?: boolean;
@@ -39,12 +39,12 @@ export function MenuView(callbacks: MenuViewCallbacks): HTMLElement {
   const logoFrame = document.createElement("div");
   logoFrame.className = "logo-frame";
 
+  const gameLogo = document.createElement("h1");
+  gameLogo.className = "game-logo";
+  gameLogo.textContent = "VillainDungeon";
+
   const menuNav = document.createElement("nav");
   menuNav.className = "menu-nav";
-
-  const gameLogo = document.createElement("img");
-  gameLogo.src = "../src/assets/villain-dungeon-logo.png";
-  gameLogo.className = "game-logo";
 
   const continueBtn = document.createElement("button");
   continueBtn.className = "menu-item";
@@ -122,8 +122,10 @@ export function MenuView(callbacks: MenuViewCallbacks): HTMLElement {
   });
 
   newGameBtn.addEventListener("click", () => {
-    playerNameInput.hidden = false;
-    playerNameInput.focus();
+    playerNameInput.hidden = !playerNameInput.hidden;
+    if (!playerNameInput.hidden) {
+      playerNameInput.focus();
+    }
   });
 
   playerNameInput.addEventListener("keydown", (e) => {
@@ -136,16 +138,15 @@ export function MenuView(callbacks: MenuViewCallbacks): HTMLElement {
   });
 
   creditsBtn.addEventListener("click", () => {
-    callbacks.onCredits();
+    callbacks.onCredits?.();
   });
 
-  continueBtn.addEventListener("click", async () => {
-    if (continueBtn.disabled) return;
-    await callbacks.onContinue();
+  continueBtn.addEventListener("click", () => {
+    callbacks.onContinue();
   });
 
   settingsBtn.addEventListener("click", () => {
-    callbacks.onSettings();
+    // Settings route is handled by the app router when available.
   });
 
   return menuScreen;
@@ -217,13 +218,6 @@ export function ExitTitle(): HTMLElement {
   return exitTitle;
 }
 
-export function createGameLogo(): HTMLImageElement {
-  const img = document.createElement("img");
-  img.src = "../src/assets/villain-dungeon-logo.png";
-  img.className = "game-logo";
-  return img;
-}
-
 export function createContinueBtn(): HTMLButtonElement {
   const btn = document.createElement("button");
   btn.className = "menu-item";
@@ -235,20 +229,6 @@ export function createNewGameBtn(): HTMLButtonElement {
   const btn = document.createElement("button");
   btn.className = "menu-item";
   btn.textContent = "New Game";
-  return btn;
-}
-
-export function createSettingsBtn(): HTMLButtonElement {
-  const btn = document.createElement("button");
-  btn.className = "menu-item";
-  btn.textContent = "Settings";
-  return btn;
-}
-
-export function createCreditsBtn(): HTMLButtonElement {
-  const btn = document.createElement("button");
-  btn.className = "menu-item";
-  btn.textContent = "Credits";
   return btn;
 }
 
