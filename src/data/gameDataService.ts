@@ -72,19 +72,12 @@ class GameDataService {
   }
 
   async startNewGame(playerName: string): Promise<string | null> {
-    const slotId = gameState.getFirstEmptySlot();
-    if (!slotId) {
-      this.logger.error(SystemName.Database, "No empty slots available");
-      return null;
-    }
+    const slotId = gameState.getNextSlotId();
 
     gameState.isLoading = true;
     this.notify();
 
     try {
-      // Clear if slot exists
-      await this.db.deleteSlot(slotId);
-
       gameState.currentSlotId = slotId;
       gameState.player = new Player(playerName);
       gameState.dungeonLevel = 1;
@@ -165,6 +158,32 @@ class GameDataService {
 
   getSlots(): SaveSlot[] {
     return gameState.slots;
+  }
+
+  async deleteSlot(slotId: string): Promise<boolean> {
+    gameState.isLoading = true;
+    this.notify();
+
+    try {
+      await this.db.deleteSlot(slotId);
+      this.logger.log(SystemName.Database, `Slot ${slotId} deleted`);
+
+      // If the current slot was deleted, clear it
+      if (gameState.currentSlotId === slotId) {
+        gameState.currentSlotId = null;
+        gameState.player = null;
+        gameState.dungeonLevel = 1;
+      }
+
+      await this.refreshSlots();
+      return true;
+    } catch (error) {
+      this.logger.error(SystemName.Database, "Failed to delete slot", error);
+      return false;
+    } finally {
+      gameState.isLoading = false;
+      this.notify();
+    }
   }
 }
 

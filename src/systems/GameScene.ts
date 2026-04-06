@@ -14,6 +14,7 @@ import { CombatManager } from "@/systems/combat/CombatManager";
 import { MapGenerator, TileType } from "@/utils/MapGen";
 import type { GeneratedMap, Room } from "@/utils/MapGen";
 import { gameDataService } from "@/data";
+import { navigateTo } from "@/router";
 
 export interface GameSceneConfig {
   mapWidth: number;
@@ -40,11 +41,12 @@ export class GameScene {
   private escapeCollisionLockUntil = 0;
   private dungeonLevel = 1;
   private hudRoot: HTMLDivElement | null = null;
-  private hudMeta: HTMLDivElement | null = null;
   private menuPanel: HTMLDivElement | null = null;
   private menuContent: HTMLDivElement | null = null;
   private menuToggle: HTMLButtonElement | null = null;
   private menuOpen = false;
+  private externalUI: HTMLElement | null = null;
+  private externalUIToggle: HTMLElement | null = null;
 
   private map: GeneratedMap | null = null;
 
@@ -163,7 +165,7 @@ export class GameScene {
     this.spawnEnemies();
     this.camera.follow(this.player);
     this.camera.update();
-    this.updateHudMeta();
+    this.updateExternalUI();
   }
 
   private advanceToNextLevel(): void {
@@ -175,11 +177,19 @@ export class GameScene {
   private createHud(): void {
     if (this.hudRoot) return;
 
+    // Find external UI elements created by gameRoute
+    this.externalUI = document.getElementById("game-ui-panel");
+    this.externalUIToggle = document.getElementById("game-ui-toggle");
+    const metaBar = document.getElementById("game-meta-bar");
+    
+    // Store reference to meta bar for updates
+    if (metaBar) {
+      (this as unknown as Record<string, unknown>).metaBar = metaBar;
+    }
+
+    // Create in-game menu (top-right toggle for camp menu)
     this.hudRoot = document.createElement("div");
     this.hudRoot.className = "ingame-ui";
-
-    this.hudMeta = document.createElement("div");
-    this.hudMeta.className = "ingame-meta";
 
     this.menuToggle = document.createElement("button");
     this.menuToggle.className = "ingame-menu-toggle";
@@ -212,12 +222,16 @@ export class GameScene {
     closeBtn.className = "ingame-menu-btn ingame-menu-close";
     closeBtn.textContent = "Fermer";
 
+    const exitBtn = document.createElement("button");
+    exitBtn.className = "ingame-menu-btn ingame-menu-exit";
+    exitBtn.textContent = "Quitter";
+
     this.menuContent = document.createElement("div");
     this.menuContent.className = "ingame-menu-content";
 
-    menuActions.append(inventoryBtn, statsBtn, saveBtn, closeBtn);
+    menuActions.append(inventoryBtn, statsBtn, saveBtn, closeBtn, exitBtn);
     this.menuPanel.append(menuHeader, menuActions, this.menuContent);
-    this.hudRoot.append(this.hudMeta, this.menuToggle, this.menuPanel);
+    this.hudRoot.append(this.menuToggle, this.menuPanel);
     this.container.appendChild(this.hudRoot);
 
     this.menuToggle.addEventListener("click", () => this.toggleMenu());
@@ -226,8 +240,9 @@ export class GameScene {
     statsBtn.addEventListener("click", () => this.renderStatsPanel());
     saveBtn.addEventListener("click", () => this.handleSave());
     closeBtn.addEventListener("click", () => this.toggleMenu(false));
+    exitBtn.addEventListener("click", () => this.handleExit());
 
-    this.updateHudMeta();
+    this.updateExternalUI();
   }
 
   private toggleMenu(force?: boolean): void {
@@ -242,11 +257,53 @@ export class GameScene {
     }
   }
 
-  private updateHudMeta(): void {
-    if (!this.hudMeta || !this.player) return;
-    const { xp, xpToNext, level } = this.player.stats;
-    const ratio = Math.max(0, Math.min(100, Math.round((xp / Math.max(1, xpToNext)) * 100)));
-    this.hudMeta.textContent = `Etage ${this.dungeonLevel} | ${this.player.getPlayerName()} | Niv ${level} | XP ${xp}/${xpToNext} (${ratio}%)`;
+  private updateExternalUI(): void {
+    if (!this.player) return;
+    const { hp, maxHp, xp, xpToNext, level, attack, defense, speed } = this.player.stats;
+    
+    // Update top meta bar
+    const metaBar = (this as unknown as Record<string, unknown>).metaBar as HTMLElement | undefined;
+    if (metaBar) {
+      const ratio = Math.max(0, Math.min(100, Math.round((xp / Math.max(1, xpToNext)) * 100)));
+      metaBar.textContent = `Etage ${this.dungeonLevel} | ${this.player.getPlayerName()} | Niv ${level} | XP ${xp}/${xpToNext} (${ratio}%)`;
+    }
+
+    // Update external UI panel (if elements exist)
+    const hpFill = document.getElementById("ui-hp-fill") as HTMLElement | null;
+    const hpText = document.getElementById("ui-hp-text") as HTMLElement | null;
+    const xpText = document.getElementById("ui-xp-text") as HTMLElement | null;
+    const atkEl = document.getElementById("ui-atk") as HTMLElement | null;
+    const defEl = document.getElementById("ui-def") as HTMLElement | null;
+    const spdEl = document.getElementById("ui-spd") as HTMLElement | null;
+    const invEl = document.getElementById("ui-inventory") as HTMLElement | null;
+
+    if (hpFill) {
+      hpFill.style.width = `${Math.max(0, (hp / maxHp) * 100)}%`;
+    }
+    if (hpText) {
+      hpText.textContent = `${hp}/${maxHp}`;
+    }
+    if (xpText) {
+      const ratio = Math.max(0, Math.min(100, Math.round((xp / Math.max(1, xpToNext)) * 100)));
+      xpText.textContent = `Niv ${level} (${ratio}%)`;
+    }
+    if (atkEl) {
+      atkEl.textContent = `${attack}`;
+    }
+    if (defEl) {
+      defEl.textContent = `${defense}`;
+    }
+    if (spdEl) {
+      spdEl.textContent = `${speed}`;
+    }
+    if (invEl) {
+      const items = this.player.getInventory();
+      const itemText = items
+        .filter((item) => item.quantity > 0)
+        .map((item) => `${item.name} x${item.quantity}`)
+        .join(", ");
+      invEl.textContent = itemText || "Vide";
+    }
   }
 
   private renderInventoryPanel(): void {
@@ -301,6 +358,20 @@ export class GameScene {
         <p>Erreur: impossible de sauvegarder ici.</p>
       `;
     }
+  }
+
+  private async handleExit(): Promise<void> {
+    if (!this.player) return;
+    
+    // Save the game before exiting
+    try {
+      await gameDataService.saveGame(this.player, this.dungeonLevel);
+    } catch {
+      // Continue with exit even if save fails
+    }
+    
+    // Navigate to main menu
+    navigateTo("/");
   }
 
   private spawnEnemies(): void {
@@ -575,6 +646,14 @@ export class GameScene {
 
     this.inCombat = true;
     this.gameLoop.stop();
+    
+    // Hide external UI during combat
+    if (this.externalUI) {
+      this.externalUI.classList.add("combat-hidden");
+    }
+    if (this.externalUIToggle) {
+      (this.externalUIToggle as HTMLElement).style.display = "none";
+    }
 
     const engagedEnemy = enemy;
     this.combatManager?.destroy();
@@ -596,7 +675,16 @@ export class GameScene {
       this.combatManager?.destroy();
       this.combatManager = null;
       this.inCombat = false;
-      this.updateHudMeta();
+      
+      // Show external UI after combat
+      if (this.externalUI) {
+        this.externalUI.classList.remove("combat-hidden");
+      }
+      if (this.externalUIToggle) {
+        (this.externalUIToggle as HTMLElement).style.display = "";
+      }
+      
+      this.updateExternalUI();
       this.gameLoop.start();
     });
   }

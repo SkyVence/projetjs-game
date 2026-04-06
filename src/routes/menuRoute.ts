@@ -1,4 +1,4 @@
-import { MenuView, SlotListView, type ContinuePreview } from "@/menu";
+import { MenuView, SlotListView, NewGameDialog } from "@/menu";
 import { gameState, gameDataService } from "@/data";
 import { navigateTo } from "../router";
 
@@ -6,72 +6,30 @@ let unsubscribe: (() => void) | null = null;
 let menuElementRef: HTMLElement | null = null;
 
 /**
- * Updates the preview card in the menu when state changes.
+ * Updates the Continue button state when slots load.
  * This is called by the subscription callback.
  */
-function updateMenuPreview(): void {
+function updateContinueButton(): void {
   if (!menuElementRef) return;
 
-  // Find the preview body element and update it
-  const previewBody = menuElementRef.querySelector(".save-preview-body");
-  if (!previewBody) return;
-
-  if (gameState.isLoading && gameState.slots.length === 0) {
-    previewBody.innerHTML = `<p class="save-preview-empty">Loading save data...</p>`;
-  } else if (gameState.player) {
-    const preview = {
-      name: gameState.player.getPlayerName(),
-      level: gameState.player.stats.level,
-      layer: gameState.dungeonLevel,
-    };
-    previewBody.innerHTML = `
-      <p><strong>Name:</strong> ${preview.name}</p>
-      <p><strong>Level:</strong> ${preview.level}</p>
-      <p><strong>Layer:</strong> ${preview.layer}</p>
-    `;
-  } else if (gameState.canContinue) {
-    // Show that saves exist but no current player loaded
-    const latestSlot = gameState.slots[0];
-    if (latestSlot) {
-      previewBody.innerHTML = `
-        <p><strong>Name:</strong> ${latestSlot.player.name}</p>
-        <p><strong>Level:</strong> ${latestSlot.player.stats.level}</p>
-        <p><strong>Layer:</strong> ${latestSlot.dungeonLevel}</p>
-      `;
-    }
-  } else {
-    previewBody.innerHTML = `<p class="save-preview-empty">No save available.</p>`;
-  }
-
-  // Update the Continue button state
+  // Update the Select a save button state
   const continueBtn = menuElementRef.querySelector(".menu-item") as HTMLButtonElement | null;
-  if (continueBtn && continueBtn.textContent === "Continue") {
+  if (continueBtn && continueBtn.textContent === "Select a save") {
     continueBtn.disabled = !gameState.canContinue || gameState.isLoading;
   }
 }
 
 export function MenuRoute(): HTMLElement {
-  // Subscribe to state changes for reactive preview updates
-  // This updates the preview card without triggering navigation
+  // Subscribe to state changes for reactive updates
   if (!unsubscribe) {
     unsubscribe = gameDataService.subscribe(() => {
-      updateMenuPreview();
+      updateContinueButton();
     });
   }
 
-  // Refresh slots every time menu opens (user requirement #2)
+  // Refresh slots every time menu opens
   // This ensures we always have fresh data
   gameDataService.refreshSlots();
-
-  // Build preview from current player if exists
-  const currentPreview = gameState.player
-    ? ({
-        name: gameState.player.getPlayerName(),
-        level: gameState.player.stats.level,
-        layer: gameState.dungeonLevel,
-        savedAt: Date.now(),
-      } as ContinuePreview)
-    : null;
 
   const menuElement = MenuView({
     onExit: () => {
@@ -88,38 +46,63 @@ export function MenuRoute(): HTMLElement {
       const app = document.getElementById("app");
       if (!app) return;
 
-      app.innerHTML = "";
-      app.appendChild(
-        SlotListView({
-          slots: gameState.getSlotViewModels(),
-          isLoading: gameState.isLoading,
-          onSelectSlot: async (slotId: string) => {
-            const success = await gameDataService.loadGame(slotId);
-            if (success) {
-              navigateTo("/game");
-            }
-          },
-          onBack: () => {
-            navigateTo("/");
-          },
-        })
-      );
-    },
-    onCredits: () => {
-      navigateTo("/credits");
-    },
-    onSettings: () => {
-      navigateTo("/settings");
+      renderSlotSelection(app);
     },
     canContinue: gameState.canContinue,
-    continuePreview: currentPreview,
-    loadingContinuePreview: gameState.isLoading && gameState.slots.length === 0,
   });
 
   // Store reference for subscription updates
   menuElementRef = menuElement;
 
   return menuElement;
+}
+
+function renderSlotSelection(app: HTMLElement): void {
+  app.innerHTML = "";
+  app.appendChild(
+    SlotListView({
+      slots: gameState.getSlotViewModels(),
+      isLoading: gameState.isLoading,
+      onSelectSlot: async (slotId: string) => {
+        const success = await gameDataService.loadGame(slotId);
+        if (success) {
+          navigateTo("/game");
+        }
+      },
+      onDeleteSlot: async (slotId: string) => {
+        const slot = gameState.slots.find((s) => s.id === slotId);
+        const playerName = slot?.player.name || "this save";
+
+        if (confirm(`Are you sure you want to delete "${playerName}"? This action cannot be undone.`)) {
+          const success = await gameDataService.deleteSlot(slotId);
+          if (success) {
+            // Re-render slot selection after deletion
+            renderSlotSelection(app);
+          }
+        }
+      },
+      onNewGame: () => {
+        // Show new game dialog
+        const dialog = NewGameDialog({
+          onConfirm: async (playerName: string) => {
+            const slotId = await gameDataService.startNewGame(playerName);
+            if (slotId) {
+              navigateTo("/game");
+            }
+          },
+          onCancel: () => {
+            // Close dialog and re-render slot selection
+            renderSlotSelection(app);
+          },
+        });
+        app.innerHTML = "";
+        app.appendChild(dialog);
+      },
+      onBack: () => {
+        navigateTo("/");
+      },
+    })
+  );
 }
 
 export function cleanupMenuRoute(): void {

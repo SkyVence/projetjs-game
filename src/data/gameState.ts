@@ -1,16 +1,12 @@
 import type { Player } from "@/class/player";
 import type { SaveSlot } from "@/db";
 
-export const MAX_SLOTS = 3;
-export const SLOT_IDS = ["slot-1", "slot-2", "slot-3"];
-
 export interface SlotViewModel {
   id: string;
-  isEmpty: boolean;
-  name?: string;
-  level?: number;
-  dungeonLevel?: number;
-  savedAt?: number;
+  name: string;
+  level: number;
+  dungeonLevel: number;
+  savedAt: number;
 }
 
 export const gameState = {
@@ -36,27 +32,29 @@ export const gameState = {
   },
 
   getSlotViewModels(): SlotViewModel[] {
-    return SLOT_IDS.map((id) => {
-      const slot = this.slots.find((s) => s.id === id);
-      if (slot) {
-        return {
-          id,
-          isEmpty: false,
-          name: slot.player.name,
-          level: slot.player.stats.level,
-          dungeonLevel: slot.dungeonLevel,
-          savedAt: slot.savedAt,
-        };
-      }
-      return {
-        id,
-        isEmpty: true,
-      };
-    });
+    // Return only existing saves, no empty slots
+    return this.slots.map((slot) => ({
+      id: slot.id,
+      name: slot.player.name,
+      level: slot.player.stats.level,
+      dungeonLevel: slot.dungeonLevel,
+      savedAt: slot.savedAt,
+    }));
   },
 
-  getFirstEmptySlot(): string | null {
-    return SLOT_IDS.find((id) => !this.slots.some((s) => s.id === id)) || null;
+  getNextSlotId(): string {
+    // Find the highest slot number and add 1
+    let maxNum = 0;
+    for (const slot of this.slots) {
+      const match = slot.id.match(/slot-(\d+)/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxNum) {
+          maxNum = num;
+        }
+      }
+    }
+    return `slot-${maxNum + 1}`;
   },
 
   getCurrentSlotPreview() {
