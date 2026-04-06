@@ -1,8 +1,11 @@
 :root {
     --bg-overlay: rgba(7, 12, 24, 0.58);
+    --panel-overlay: rgba(10, 16, 32, 0.72);
     --text-main: #f2eadf;
+    --text-muted: rgba(242, 234, 223, 0.75);
+    --accent: #7ad7ff;
+    --glow: rgba(122, 215, 255, 0.35);
     --menu-item-width: clamp(220px, 24vw, 360px);
-    --combat-font: "Trebuchet MS", "Verdana", sans-serif;
 }
 
 html,
@@ -83,7 +86,11 @@ textarea {
     min-width: min(420px, 92vw);
     padding: 10px 14px;
     border: 2px solid #0f1424;
-    background: linear-gradient(90deg, rgba(10, 18, 38, 0.94), rgba(20, 30, 56, 0.84));
+    background: linear-gradient(
+        90deg,
+        rgba(10, 18, 38, 0.94),
+        rgba(20, 30, 56, 0.84)
+    );
     color: #f2eadf;
     font-size: 0.86rem;
     letter-spacing: 0.04em;
@@ -111,7 +118,11 @@ textarea {
 .ingame-menu-panel {
     width: min(430px, 92vw);
     border: 3px solid #101625;
-    background: linear-gradient(180deg, rgba(10, 18, 36, 0.97), rgba(8, 14, 28, 0.96));
+    background: linear-gradient(
+        180deg,
+        rgba(10, 18, 36, 0.97),
+        rgba(8, 14, 28, 0.96)
+    );
     color: #f2eadf;
     padding: 12px;
     box-shadow: 0 10px 34px rgba(0, 0, 0, 0.56);
@@ -143,7 +154,11 @@ textarea {
 
 .ingame-menu-content {
     border: 2px solid rgba(157, 176, 220, 0.24);
-    background: linear-gradient(90deg, rgba(0, 6, 18, 0.56), rgba(0, 0, 0, 0.18));
+    background: linear-gradient(
+        90deg,
+        rgba(0, 6, 18, 0.56),
+        rgba(0, 0, 0, 0.18)
+    );
     min-height: 150px;
     padding: 10px;
     font-size: 0.92rem;
@@ -196,30 +211,27 @@ textarea {
     gap: clamp(24px, 4vw, 48px);
     padding: clamp(18px, 2vw, 28px);
     box-sizing: border-box;
+    background:
+        linear-gradient(
+            90deg,
+            rgba(0, 0, 0, 0.62) 0%,
+            rgba(0, 0, 0, 0.28) 35%,
+            rgba(0, 0, 0, 0.12) 100%
+        ),
+        url("./src/assets/villain-dungeon-background.png") center / cover
+            no-repeat;
 }
 
 .menu-left {
     display: flex;
     flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
     gap: clamp(18px, 3vh, 34px);
-    padding: clamp(22px, 3vw, 36px);
+    padding: clamp(24px, 4vw, 48px);
     min-height: 100%;
     box-sizing: border-box;
-}
-
-.logo-frame {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: clamp(90px, 14vh, 150px);
-    max-width: 100%;
-}
-
-.game-logo {
-    width: min(100%, 300px);
-    height: auto;
-    display: block;
-    object-fit: contain;
+    max-width: 420px;
 }
 
 .menu-nav {
@@ -228,11 +240,13 @@ textarea {
     gap: clamp(14px, 2.2vh, 24px);
     align-items: flex-start;
     width: 100%;
+    max-width: 100%;
 }
 
 .menu-item {
     width: var(--menu-item-width);
     height: 52px;
+    min-height: 52px;
     border: 2px solid rgba(255, 255, 255, 0.35);
     border-radius: 18px;
     background: rgba(8, 12, 18, 0.22);
@@ -267,6 +281,7 @@ textarea {
 .player-name-input {
     width: var(--menu-item-width);
     height: 52px;
+    min-height: 52px;
     box-sizing: border-box;
     padding: 0 14px;
     border: 2px solid rgba(255, 255, 255, 0.35);
@@ -277,13 +292,6 @@ textarea {
     font-size: clamp(1rem, 1.2vw, 1.2rem);
     outline: none;
     backdrop-filter: blur(4px);
-}
-
-.not-found {
-    text-align: center;
-    padding: 20px;
-    font-size: 1.5rem;
-    color: black;
 }
 
 .player-name-input::placeholder {
@@ -334,8 +342,7 @@ textarea {
     padding: 14px;
     box-sizing: border-box;
     overflow: hidden;
-    background:
-        linear-gradient(180deg, #130f1b 0 46%, #211b2c 46% 100%);
+    background: linear-gradient(180deg, #130f1b 0 46%, #211b2c 46% 100%);
 }
 
 .rpg-combat-header {
@@ -394,7 +401,11 @@ textarea {
     position: absolute;
     inset: 0 0 45% 0;
     background:
-        radial-gradient(circle at 52% -24%, rgba(170, 132, 255, 0.14), transparent 52%),
+        radial-gradient(
+            circle at 52% -24%,
+            rgba(170, 132, 255, 0.14),
+            transparent 52%
+        ),
         linear-gradient(180deg, #1d1730, #120f1d);
 }
 
@@ -423,14 +434,13 @@ textarea {
     content: "";
     position: absolute;
     inset: 0;
-    background:
-        repeating-linear-gradient(
-            90deg,
-            transparent 0,
-            transparent 58px,
-            rgba(0, 0, 0, 0.16) 58px,
-            rgba(0, 0, 0, 0.16) 62px
-        );
+    background: repeating-linear-gradient(
+        90deg,
+        transparent 0,
+        transparent 58px,
+        rgba(0, 0, 0, 0.16) 58px,
+        rgba(0, 0, 0, 0.16) 62px
+    );
     opacity: 0.4;
 }
 
@@ -455,7 +465,15 @@ textarea {
     border: 3px solid #111;
     background: linear-gradient(180deg, #716b82, #423d50);
     box-shadow: 3px 3px 0 #000;
-    clip-path: polygon(12% 100%, 4% 62%, 24% 28%, 48% 16%, 74% 28%, 92% 62%, 86% 100%);
+    clip-path: polygon(
+        12% 100%,
+        4% 62%,
+        24% 28%,
+        48% 16%,
+        74% 28%,
+        92% 62%,
+        86% 100%
+    );
     opacity: 0.96;
 }
 
@@ -485,8 +503,13 @@ textarea {
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background:
-        radial-gradient(circle at 50% 34%, #fff3bf 0 28%, #ffba63 29% 56%, #f07b2c 57% 76%, transparent 77%);
+    background: radial-gradient(
+        circle at 50% 34%,
+        #fff3bf 0 28%,
+        #ffba63 29% 56%,
+        #f07b2c 57% 76%,
+        transparent 77%
+    );
     filter: drop-shadow(0 0 10px rgba(255, 183, 96, 0.62));
 }
 
@@ -498,7 +521,12 @@ textarea {
     height: 44px;
     transform: translateX(-50%);
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(255, 205, 121, 0.35) 0, rgba(255, 205, 121, 0.14) 48%, transparent 72%);
+    background: radial-gradient(
+        circle,
+        rgba(255, 205, 121, 0.35) 0,
+        rgba(255, 205, 121, 0.14) 48%,
+        transparent 72%
+    );
     pointer-events: none;
 }
 
@@ -587,7 +615,10 @@ textarea {
     width: 14px;
     height: 14px;
     background: #fff;
-    box-shadow: 26px 0 0 #fff, -10px 8px 0 #4f37b8, 40px 8px 0 #4f37b8;
+    box-shadow:
+        26px 0 0 #fff,
+        -10px 8px 0 #4f37b8,
+        40px 8px 0 #4f37b8;
 }
 
 .rpg-sprite-enemy[data-monster="skeleton"] {
@@ -643,7 +674,10 @@ textarea {
     width: 16px;
     height: 16px;
     background: #fff;
-    box-shadow: 30px 0 0 #fff, 0 26px 0 #2a0505, 30px 26px 0 #2a0505;
+    box-shadow:
+        30px 0 0 #fff,
+        0 26px 0 #2a0505,
+        30px 26px 0 #2a0505;
 }
 
 .rpg-sprite-player {
@@ -968,7 +1002,8 @@ textarea {
 }
 
 @keyframes rpgFloat {
-    0%, 100% {
+    0%,
+    100% {
         transform: translateY(0);
     }
 
@@ -978,7 +1013,8 @@ textarea {
 }
 
 @keyframes rpgTorch {
-    0%, 100% {
+    0%,
+    100% {
         transform: translateY(0) scale(1);
         opacity: 0.95;
     }
@@ -996,27 +1032,27 @@ textarea {
 
     .menu-screen {
         grid-template-columns: 1fr;
+        min-height: 100vh;
+    }
+
+    .menu-left {
+        min-height: auto;
+        padding: clamp(18px, 4vw, 28px);
+        max-width: 100%;
     }
 
     .menu-right {
         min-height: 220px;
     }
 
-    .menu-nav {
-        align-items: stretch;
+    .menu-item,
+    .player-name-input {
+        width: min(100%, var(--menu-item-width));
     }
 
     .new-game-wrap {
-        width: fit-content;
-        flex-direction: row;
-        align-items: center;
-        flex-wrap: nowrap;
-    }
-
-    .player-name-input {
-        width: var(--menu-item-width);
-        flex: 0 0 var(--menu-item-width);
-        min-width: 0;
+        width: 100%;
+        flex-wrap: wrap;
     }
 
     .rpg-combat-scene {

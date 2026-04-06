@@ -5,9 +5,8 @@ export type NavigateFunction = (path: string) => void;
 export interface MenuViewCallbacks {
   onExit: () => void;
   onNewGame: (playerName: string) => void;
-  onCredits: () => void;
   onContinue: () => void;
-  onSettings: () => void;
+
   canContinue?: boolean;
 }
 
@@ -21,15 +20,8 @@ export function MenuView(callbacks: MenuViewCallbacks): HTMLElement {
   const menuRight = document.createElement("aside");
   menuRight.className = "menu-right";
 
-  const logoFrame = document.createElement("div");
-  logoFrame.className = "logo-frame";
-
   const menuNav = document.createElement("nav");
   menuNav.className = "menu-nav";
-
-  const gameLogo = document.createElement("img");
-  gameLogo.src = "../src/assets/villain-dungeon-logo.png";
-  gameLogo.className = "game-logo";
 
   const continueBtn = document.createElement("button");
   continueBtn.className = "menu-item";
@@ -39,14 +31,6 @@ export function MenuView(callbacks: MenuViewCallbacks): HTMLElement {
   const newGameBtn = document.createElement("button");
   newGameBtn.className = "menu-item";
   newGameBtn.textContent = "New Game";
-
-  const settingsBtn = document.createElement("button");
-  settingsBtn.className = "menu-item";
-  settingsBtn.textContent = "Settings";
-
-  const creditsBtn = document.createElement("button");
-  creditsBtn.className = "menu-item";
-  creditsBtn.textContent = "Credits";
 
   const exitBtn = document.createElement("button");
   exitBtn.className = "menu-item";
@@ -63,10 +47,8 @@ export function MenuView(callbacks: MenuViewCallbacks): HTMLElement {
   newGameWrap.className = "new-game-wrap";
   newGameWrap.append(newGameBtn, playerNameInput);
 
-  logoFrame.appendChild(gameLogo);
-  menuNav.append(continueBtn, newGameWrap, settingsBtn, creditsBtn, exitBtn);
-
-  menuLeft.append(logoFrame, menuNav);
+  menuNav.append(continueBtn, newGameWrap, exitBtn);
+  menuLeft.append(menuNav);
   menuScreen.append(menuLeft, menuRight);
 
   exitBtn.addEventListener("click", () => {
@@ -79,8 +61,10 @@ export function MenuView(callbacks: MenuViewCallbacks): HTMLElement {
   });
 
   newGameBtn.addEventListener("click", () => {
-    playerNameInput.hidden = false;
-    playerNameInput.focus();
+    playerNameInput.hidden = !playerNameInput.hidden;
+    if (!playerNameInput.hidden) {
+      playerNameInput.focus();
+    }
   });
 
   playerNameInput.addEventListener("keydown", (e) => {
@@ -92,16 +76,8 @@ export function MenuView(callbacks: MenuViewCallbacks): HTMLElement {
     }
   });
 
-  creditsBtn.addEventListener("click", () => {
-    callbacks.onCredits();
-  });
-
   continueBtn.addEventListener("click", () => {
     callbacks.onContinue();
-  });
-
-  settingsBtn.addEventListener("click", () => {
-    callbacks.onSettings();
   });
 
   return menuScreen;
@@ -112,13 +88,6 @@ export function ExitTitle(): HTMLElement {
   exitTitle.className = "exit-title";
   exitTitle.textContent = "Goodbye !";
   return exitTitle;
-}
-
-export function createGameLogo(): HTMLImageElement {
-  const img = document.createElement("img");
-  img.src = "../src/assets/villain-dungeon-logo.png";
-  img.className = "game-logo";
-  return img;
 }
 
 export function createContinueBtn(): HTMLButtonElement {
@@ -132,20 +101,6 @@ export function createNewGameBtn(): HTMLButtonElement {
   const btn = document.createElement("button");
   btn.className = "menu-item";
   btn.textContent = "New Game";
-  return btn;
-}
-
-export function createSettingsBtn(): HTMLButtonElement {
-  const btn = document.createElement("button");
-  btn.className = "menu-item";
-  btn.textContent = "Settings";
-  return btn;
-}
-
-export function createCreditsBtn(): HTMLButtonElement {
-  const btn = document.createElement("button");
-  btn.className = "menu-item";
-  btn.textContent = "Credits";
   return btn;
 }
 
