@@ -149,9 +149,10 @@ textarea {
     gap: 10px;
 }
 
-/* Top Meta Bar - Always visible */
+/* Top Meta Bar - Always visible, sticky on game area */
 .game-meta-bar {
-    width: min(96vw, 1720px);
+    width: 100%;
+    max-width: min(96vw, 1720px);
     padding: 10px 14px;
     border: 3px solid #101625;
     background: linear-gradient(
@@ -168,24 +169,26 @@ textarea {
     text-align: center;
     border-radius: 6px;
     box-sizing: border-box;
+    flex-shrink: 0;
 }
 
 /* Game Area - Contains canvas and bottom UI */
 .game-area {
-    width: min(96vw, 1720px);
+    width: 100%;
+    max-width: min(96vw, 1720px);
     flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 10px;
     position: relative;
+    overflow: hidden;
 }
 
 .game-container {
     width: 100%;
     aspect-ratio: 16 / 9;
-    max-height: calc(100vh - 200px);
     position: relative;
     border: 4px solid #1a1720;
     box-shadow:
@@ -196,6 +199,17 @@ textarea {
     border-radius: 6px;
     overflow: hidden;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Canvas scales to fit container while maintaining aspect ratio */
+.game-container canvas {
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
 }
 
 /* External UI Panel - Compact */
@@ -399,10 +413,6 @@ textarea {
 
     .game-area {
         gap: 6px;
-    }
-
-    .game-container {
-        max-height: calc(100vh - 80px);
     }
 
     /* Hide UI panel on small screens */
@@ -711,9 +721,14 @@ textarea {
     width: var(--menu-item-width);
     height: 52px;
     min-height: 52px;
-    border: 2px solid rgba(255, 255, 255, 0.35);
+    border: 2px solid rgba(255, 255, 255, 0.4);
     border-radius: 18px;
-    background: rgba(8, 12, 18, 0.22);
+    background: linear-gradient(
+        135deg,
+        rgba(20, 28, 42, 0.78) 0%,
+        rgba(12, 18, 28, 0.82) 50%,
+        rgba(18, 26, 38, 0.76) 100%
+    );
     color: var(--text-main);
     font: inherit;
     font-size: clamp(1rem, 1.2vw, 1.2rem);
@@ -723,15 +738,21 @@ textarea {
         background 180ms ease,
         border-color 180ms ease,
         box-shadow 180ms ease;
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(8px);
     box-sizing: border-box;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 .menu-item:hover {
     transform: translateX(6px);
-    background: rgba(8, 12, 18, 0.34);
-    border-color: rgba(122, 215, 255, 0.45);
-    box-shadow: 0 0 18px rgba(122, 215, 255, 0.12);
+    background: linear-gradient(
+        135deg,
+        rgba(28, 38, 54, 0.85) 0%,
+        rgba(18, 26, 38, 0.88) 50%,
+        rgba(24, 34, 48, 0.84) 100%
+    );
+    border-color: rgba(122, 215, 255, 0.6);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), 0 0 18px rgba(122, 215, 255, 0.15);
 }
 
 .new-game-wrap {
@@ -748,14 +769,19 @@ textarea {
     min-height: 52px;
     box-sizing: border-box;
     padding: 0 14px;
-    border: 2px solid rgba(255, 255, 255, 0.35);
+    border: 2px solid rgba(255, 255, 255, 0.4);
     border-radius: 18px;
-    background: rgba(8, 12, 18, 0.22);
+    background: linear-gradient(
+        135deg,
+        rgba(20, 28, 42, 0.78) 0%,
+        rgba(12, 18, 28, 0.82) 50%,
+        rgba(18, 26, 38, 0.76) 100%
+    );
     color: var(--text-main);
     font: inherit;
     font-size: clamp(1rem, 1.2vw, 1.2rem);
     outline: none;
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(8px);
 }
 
 .player-name-input::placeholder {
@@ -763,8 +789,8 @@ textarea {
 }
 
 .player-name-input:focus {
-    border-color: rgba(122, 215, 255, 0.55);
-    box-shadow: 0 0 18px rgba(122, 215, 255, 0.12);
+    border-color: rgba(122, 215, 255, 0.7);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 0 18px rgba(122, 215, 255, 0.2);
 }
 
 .player-name-input[hidden] {
@@ -1705,7 +1731,7 @@ textarea {
     gap: 1rem;
     width: 100%;
     max-width: 500px;
-    margin-bottom: 2rem;
+    margin: 1rem 0 2rem 0;
 }
 
 .slot-list-loading {
@@ -1719,21 +1745,34 @@ textarea {
     justify-content: space-between;
     align-items: center;
     padding: 1.25rem 1.5rem;
-    border: 2px solid rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.35);
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.05);
+    background: linear-gradient(
+        135deg,
+        rgba(20, 28, 42, 0.72) 0%,
+        rgba(12, 18, 28, 0.76) 50%,
+        rgba(18, 26, 38, 0.7) 100%
+    );
     color: var(--text-main, #f2eadf);
     font: inherit;
     font-size: 1rem;
     cursor: pointer;
     transition: all 0.2s ease;
     text-align: left;
+    backdrop-filter: blur(6px);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 .slot-item:hover:not(.empty) {
-    background: rgba(122, 215, 255, 0.15);
-    border-color: rgba(122, 215, 255, 0.4);
+    background: linear-gradient(
+        135deg,
+        rgba(28, 40, 56, 0.8) 0%,
+        rgba(18, 26, 38, 0.84) 50%,
+        rgba(24, 36, 50, 0.78) 100%
+    );
+    border-color: rgba(122, 215, 255, 0.55);
     transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
 }
 
 .slot-item.empty {
@@ -1761,30 +1800,51 @@ textarea {
 
 .slot-list-back {
     padding: 0.875rem 2rem;
-    border: 2px solid rgba(255, 255, 255, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.35);
     border-radius: 8px;
-    background: transparent;
+    background: linear-gradient(
+        135deg,
+        rgba(20, 28, 42, 0.65) 0%,
+        rgba(12, 18, 28, 0.7) 100%
+    );
     color: var(--text-main, #f2eadf);
     font: inherit;
     font-size: 1rem;
     cursor: pointer;
     transition: all 0.2s ease;
+    backdrop-filter: blur(6px);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 .slot-list-back:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.5);
+    background: linear-gradient(
+        135deg,
+        rgba(28, 38, 54, 0.75) 0%,
+        rgba(18, 26, 38, 0.8) 100%
+    );
+    border-color: rgba(255, 255, 255, 0.55);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
 .slot-item.new-game-slot {
     border-style: dashed;
-    border-color: rgba(122, 215, 255, 0.4);
-    background: rgba(122, 215, 255, 0.08);
+    border-color: rgba(122, 215, 255, 0.5);
+    background: linear-gradient(
+        135deg,
+        rgba(20, 35, 50, 0.68) 0%,
+        rgba(15, 28, 42, 0.72) 50%,
+        rgba(18, 32, 46, 0.66) 100%
+    );
 }
 
 .slot-item.new-game-slot:hover {
-    background: rgba(122, 215, 255, 0.15);
-    border-color: rgba(122, 215, 255, 0.6);
+    background: linear-gradient(
+        135deg,
+        rgba(28, 45, 62, 0.78) 0%,
+        rgba(20, 35, 50, 0.82) 50%,
+        rgba(24, 40, 56, 0.76) 100%
+    );
+    border-color: rgba(122, 215, 255, 0.75);
 }
 
 /* New Game Dialog */
@@ -1849,19 +1909,29 @@ textarea {
 
 .new-game-dialog-btn {
     padding: 0.75rem 1.5rem;
-    border: 2px solid rgba(255, 255, 255, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.35);
     border-radius: 8px;
-    background: transparent;
+    background: linear-gradient(
+        135deg,
+        rgba(20, 28, 42, 0.65) 0%,
+        rgba(12, 18, 28, 0.7) 100%
+    );
     color: var(--text-main);
     font: inherit;
     font-size: 1rem;
     cursor: pointer;
     transition: all 0.2s ease;
+    backdrop-filter: blur(6px);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 .new-game-dialog-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.5);
+    background: linear-gradient(
+        135deg,
+        rgba(28, 38, 54, 0.75) 0%,
+        rgba(18, 26, 38, 0.8) 100%
+    );
+    border-color: rgba(255, 255, 255, 0.55);
 }
 
 .new-game-dialog-btn.confirm {

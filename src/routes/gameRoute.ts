@@ -27,7 +27,7 @@ export function createGameRoute(): HTMLElement {
   const wrapper = document.createElement("div");
   wrapper.className = "game-wrapper";
 
-  // Top meta bar (always visible)
+  // Top meta bar (always visible, sticky)
   const metaBar = document.createElement("div");
   metaBar.className = "game-meta-bar";
   metaBar.id = "game-meta-bar";
