@@ -28,14 +28,14 @@ export interface PlayerInventoryItem {
 
 export interface PlayerSnapshot {
   name: string;
-  stats: PlayerBaseStats & PlayerProgression & { hp: number };
+  stats: PlayerBaseStats & PlayerProgression & { hp: number; totalXpEarned: number };
   status: PlayerStatus;
   inventory: PlayerInventoryItem[];
 }
 
 export class Player extends Entity {
   public name: string;
-  public stats: PlayerBaseStats & PlayerProgression & { hp: number };
+  public stats: PlayerBaseStats & PlayerProgression & { hp: number; totalXpEarned: number };
   public status: PlayerStatus;
   private inventory: PlayerInventoryItem[];
 
@@ -51,6 +51,7 @@ export class Player extends Entity {
       level: 1,
       xp: 0,
       xpToNext: 100,
+      totalXpEarned: 0,
     };
     this.status = PlayerStatus.ALIVE;
     this.inventory = [
@@ -89,6 +90,10 @@ export class Player extends Entity {
     });
 
     player.stats = { ...snapshot.stats };
+    // Backward compatibility: ensure totalXpEarned exists (default to current xp for old saves)
+    if (player.stats.totalXpEarned === undefined) {
+      player.stats.totalXpEarned = snapshot.stats.xp + (snapshot.stats.level - 1) * 100;
+    }
     player.status = snapshot.status;
     player.inventory = snapshot.inventory.map((item) => ({ ...item }));
     player.clampHp();
@@ -166,6 +171,7 @@ export class Player extends Entity {
     if (amount <= 0) return 0;
 
     this.stats.xp += amount;
+    this.stats.totalXpEarned += amount;
     let levelsGained = 0;
 
     while (this.stats.xp >= this.stats.xpToNext) {
@@ -175,6 +181,10 @@ export class Player extends Entity {
     }
 
     return levelsGained;
+  }
+
+  public getTotalXpEarned(): number {
+    return this.stats.totalXpEarned;
   }
 
   public levelUp(): void {

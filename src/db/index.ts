@@ -1,7 +1,6 @@
 import { type PlayerSnapshot } from "@/class/player";
 import { Logger, SystemName } from "@/utils/logger";
 
-const LEGACY_SAVE_KEY = "villain_dungeon_save_v1";
 const DB_NAME = "VillainDungeon";
 const DB_VERSION = 3;
 const GAME_SAVE_VERSION = 3;
@@ -31,17 +30,10 @@ export interface SaveSlot {
   levelStates: Record<number, LevelState>;
 }
 
-interface LegacySaveData {
-  player: PlayerSnapshot;
-  dungeonLevel: number;
-  savedAt: number;
-}
-
 export class GameDatabase {
   private db: IDBDatabase | null = null;
   private ready: Promise<IDBDatabase>;
   private logger = new Logger();
-  private migrationPromise: Promise<void> | null = null;
 
   constructor() {
     this.ready = this.initDB();
@@ -102,7 +94,6 @@ export class GameDatabase {
   }
 
   async getAllSlots(): Promise<SaveSlot[]> {
-    await this.migrateFromLegacy();
     const db = await this.getDatabase();
 
     return new Promise((resolve, reject) => {
@@ -123,7 +114,6 @@ export class GameDatabase {
   }
 
   async getSlot(slotId: string): Promise<SaveSlot | null> {
-    await this.migrateFromLegacy();
     const db = await this.getDatabase();
 
     return new Promise((resolve, reject) => {
@@ -144,7 +134,6 @@ export class GameDatabase {
   }
 
   async saveSlot(slotId: string, data: { player: PlayerSnapshot; dungeonLevel: number; levelStates: Record<number, LevelState> }): Promise<void> {
-    await this.migrateFromLegacy();
     const db = await this.getDatabase();
 
     const slot: SaveSlot = {
@@ -178,7 +167,6 @@ export class GameDatabase {
   }
 
   async deleteSlot(slotId: string): Promise<void> {
-    await this.migrateFromLegacy();
     const db = await this.getDatabase();
 
     return new Promise((resolve, reject) => {
@@ -198,56 +186,8 @@ export class GameDatabase {
   }
 
   async hasAnySave(): Promise<boolean> {
-    await this.migrateFromLegacy();
     const slots = await this.getAllSlots();
     return slots.length > 0;
-  }
-
-  private async migrateFromLegacy(): Promise<void> {
-    if (this.migrationPromise) return this.migrationPromise;
-
-    this.migrationPromise = (async () => {
-      try {
-        const legacyRaw = window.localStorage.getItem(LEGACY_SAVE_KEY);
-        if (!legacyRaw) return;
-
-        const existing = await this.getAllSlots();
-        if (existing.length > 0) {
-          // Already have saves, just clean up legacy
-          window.localStorage.removeItem(LEGACY_SAVE_KEY);
-          return;
-        }
-
-        const legacy = JSON.parse(legacyRaw) as LegacySaveData;
-        
-        if (legacy.player && typeof legacy.dungeonLevel === "number") {
-          // Generate initial seed for migrated saves
-          const initialSeed = Date.now();
-          const levelStates: Record<number, LevelState> = {};
-          // Initialize state for current level and all previous levels
-          for (let level = 1; level <= legacy.dungeonLevel; level++) {
-            levelStates[level] = {
-              seed: initialSeed + level * 1000,
-              deadEnemies: [],
-            };
-          }
-
-          await this.saveSlot("slot-1", {
-            player: legacy.player,
-            dungeonLevel: legacy.dungeonLevel,
-            levelStates,
-          });
-          this.logger.log(SystemName.Database, "Migrated legacy save to slot-1");
-        }
-
-        window.localStorage.removeItem(LEGACY_SAVE_KEY);
-      } catch (error) {
-        this.logger.error(SystemName.Database, "Legacy migration failed", error);
-        // Don't throw - migration is best-effort
-      }
-    })();
-
-    return this.migrationPromise;
   }
 }
 

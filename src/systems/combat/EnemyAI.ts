@@ -147,10 +147,9 @@ export class EnemyAI {
   private remember(action: EnemyAction): void {
     if (action.type === "attack_basic") {
       this.basicChain += 1;
-      return;
+    } else {
+      this.basicChain = 0;
     }
-
-    this.basicChain = 0;
     this.lastAction = action.type;
   }
 }

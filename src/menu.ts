@@ -1,5 +1,5 @@
 import "../index.css";
-import type { SlotViewModel } from "@/data";
+import type { SlotViewModel, LastRunStats } from "@/data";
 
 export interface MenuViewCallbacks {
   onExit: () => void;
@@ -7,6 +7,49 @@ export interface MenuViewCallbacks {
   onContinue: () => void;
 
   canContinue?: boolean;
+  lastRunStats?: LastRunStats | null;
+}
+
+function createScoreboard(stats: LastRunStats): HTMLElement {
+  const scoreboardCard = document.createElement("div");
+  scoreboardCard.className = "scoreboard-card";
+
+  const title = document.createElement("h2");
+  title.className = "scoreboard-title";
+  title.textContent = "Dernier Run";
+
+  const subtitle = document.createElement("div");
+  subtitle.className = "scoreboard-subtitle";
+  subtitle.textContent = "GAME OVER";
+
+  const statsContainer = document.createElement("div");
+  statsContainer.className = "scoreboard-stats";
+
+  const statItems = [
+    { label: "Héros", value: stats.playerName },
+    { label: "Niveau Atteint", value: stats.playerLevel.toString() },
+    { label: "Étage Atteint", value: stats.dungeonLevelReached.toString() },
+    { label: "XP Total Gagné", value: stats.totalXpEarned.toString() },
+  ];
+
+  statItems.forEach((item) => {
+    const statRow = document.createElement("div");
+    statRow.className = "scoreboard-stat-row";
+
+    const statLabel = document.createElement("span");
+    statLabel.className = "scoreboard-stat-label";
+    statLabel.textContent = item.label;
+
+    const statValue = document.createElement("span");
+    statValue.className = "scoreboard-stat-value";
+    statValue.textContent = item.value;
+
+    statRow.append(statLabel, statValue);
+    statsContainer.appendChild(statRow);
+  });
+
+  scoreboardCard.append(title, subtitle, statsContainer);
+  return scoreboardCard;
 }
 
 export interface SlotListCallbacks {
@@ -72,6 +115,16 @@ export function MenuView(callbacks: MenuViewCallbacks): HTMLElement {
 
   menuLeft.append(logoFrame, menuNav);
   menuScreen.append(menuLeft);
+
+  // Add scoreboard on the right side if there's last run stats
+  if (callbacks.lastRunStats) {
+    const menuRight = document.createElement("section");
+    menuRight.className = "menu-right";
+
+    const scoreboardCard = createScoreboard(callbacks.lastRunStats);
+    menuRight.appendChild(scoreboardCard);
+    menuScreen.appendChild(menuRight);
+  }
 
   exitBtn.addEventListener("click", () => {
     if (confirm("Quitter VillainDungeon ?")) {

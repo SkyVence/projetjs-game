@@ -807,6 +807,90 @@ textarea {
     box-sizing: border-box;
 }
 
+/* Scoreboard Styles */
+.scoreboard-card {
+    width: min(380px, 90vw);
+    border: 3px solid rgba(255, 100, 100, 0.5);
+    border-radius: 16px;
+    background: linear-gradient(
+        135deg,
+        rgba(40, 20, 20, 0.9) 0%,
+        rgba(30, 15, 15, 0.92) 50%,
+        rgba(25, 12, 12, 0.88) 100%
+    );
+    backdrop-filter: blur(10px);
+    box-shadow:
+        0 12px 40px rgba(0, 0, 0, 0.5),
+        0 0 30px rgba(255, 100, 100, 0.15),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    padding: clamp(20px, 2.5vw, 28px);
+    display: grid;
+    gap: 14px;
+    animation: scoreboardAppear 0.5s ease-out;
+}
+
+@keyframes scoreboardAppear {
+    from {
+        opacity: 0;
+        transform: translateX(30px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+.scoreboard-title {
+    margin: 0;
+    font-size: clamp(1.4rem, 2.2vw, 1.9rem);
+    letter-spacing: 0.08em;
+    color: #f2eadf;
+    text-align: center;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.scoreboard-subtitle {
+    font-size: clamp(1rem, 1.5vw, 1.3rem);
+    letter-spacing: 0.2em;
+    color: #ff6b6b;
+    text-align: center;
+    font-weight: 900;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    text-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
+}
+
+.scoreboard-stats {
+    display: grid;
+    gap: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.scoreboard-stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.scoreboard-stat-label {
+    font-size: clamp(0.85rem, 1.1vw, 1rem);
+    color: rgba(242, 234, 223, 0.7);
+    font-weight: 500;
+}
+
+.scoreboard-stat-value {
+    font-size: clamp(0.95rem, 1.3vw, 1.15rem);
+    color: #f2eadf;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}
+
 .save-preview-card {
     width: min(520px, 92%);
     border: 2px solid rgba(255, 255, 255, 0.25);

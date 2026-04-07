@@ -261,12 +261,7 @@ export class CombatManager {
         : parried
           ? Math.max(1, Math.floor(rawDamage * 0.5))
           : rawDamage;
-    const defenseMitigation = Math.max(
-      0,
-      Math.round(this.player.defense * 0.18),
-    );
-    const finalDamage =
-      dealtDamage <= 0 ? 0 : Math.max(1, dealtDamage - defenseMitigation);
+    const finalDamage = dealtDamage;
 
     this.state.setPhase(CombatPhase.Animating, inGreen ? "Impact" : "Raté");
     this.ui.setTurnLabel(inGreen ? "Impact" : "Raté");
@@ -417,7 +412,9 @@ export class CombatManager {
       this.ui.setMessage(
         `<strong class="action-name">Fuite impossible</strong>Tu as déjà tenté de fuir ${this.fleeState.maxAttempts} fois durant cet étage.`,
       );
-      this.ui.setButtonsDisabled(true);
+      if (this.state.phase === CombatPhase.PlayerTurn) {
+        this.ui.runButton.disabled = true;
+      }
       return;
     }
 
@@ -432,8 +429,11 @@ export class CombatManager {
       this.ui.setMessage(
         `<strong class="action-name">Fuite ratée</strong>Tu n'as pas réussi à t'échapper.`,
       );
-      if (this.fleeState.attemptsLeft <= 0) {
-        this.ui.setButtonsDisabled(true);
+      if (
+        this.fleeState.attemptsLeft <= 0 &&
+        this.state.phase === CombatPhase.PlayerTurn
+      ) {
+        this.ui.runButton.disabled = true;
       }
       return;
     }

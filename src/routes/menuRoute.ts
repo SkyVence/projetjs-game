@@ -36,6 +36,8 @@ export function MenuRoute(): HTMLElement {
       navigateTo("/exit");
     },
     onNewGame: async (playerName: string) => {
+      // Clear last run stats when starting a new game
+      gameState.clearLastRunStats();
       const slotId = await gameDataService.startNewGame(playerName);
       if (slotId) {
         navigateTo("/game");
@@ -49,6 +51,7 @@ export function MenuRoute(): HTMLElement {
       renderSlotSelection(app);
     },
     canContinue: gameState.canContinue,
+    lastRunStats: gameState.lastRunStats,
   });
 
   // Store reference for subscription updates

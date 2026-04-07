@@ -10,6 +10,14 @@ export interface SlotViewModel {
   savedAt: number;
 }
 
+export interface LastRunStats {
+  playerName: string;
+  totalXpEarned: number;
+  dungeonLevelReached: number;
+  playerLevel: number;
+  diedAt: number;
+}
+
 export const gameState = {
   // Current game
   currentSlotId: null as string | null,
@@ -25,6 +33,9 @@ export const gameState = {
 
   // Per-level state for deterministic dungeon generation and enemy persistence
   levelStates: {} as Record<number, LevelState>,
+
+  // Last run stats for scoreboard display
+  lastRunStats: null as LastRunStats | null,
 
   // Getters
   get canContinue(): boolean {
@@ -126,8 +137,21 @@ export const gameState = {
 
   /**
    * Clear all level states (for new game).
-   */
-  clearAllLevelStates(): void {
+   */  clearAllLevelStates(): void {
     this.levelStates = {};
+  },
+
+  /**
+   * Set the last run stats when player dies.
+   */
+  setLastRunStats(stats: LastRunStats): void {
+    this.lastRunStats = stats;
+  },
+
+  /**
+   * Clear the last run stats (e.g., when starting a new game).
+   */
+  clearLastRunStats(): void {
+    this.lastRunStats = null;
   },
 };

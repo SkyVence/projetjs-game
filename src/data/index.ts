@@ -1,2 +1,2 @@
-export { gameState, type SlotViewModel } from "./gameState";
+export { gameState, type SlotViewModel, type LastRunStats } from "./gameState";
 export { gameDataService } from "./gameDataService";
